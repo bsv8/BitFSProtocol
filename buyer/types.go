@@ -61,6 +61,9 @@ type poolCheckpoint struct {
 	opening *pool.OpeningProof
 	// payment 是当前已验证付款状态（初始状态或上一笔累计付款）。
 	payment *pool.PaymentState
+	// buyerLocal 为真表示 payment 来自已验证的 Kind 5/7 对，只有买方签名；
+	// 商家签名在卖方完成付款时补齐。
+	buyerLocal bool
 }
 
 // Opening 返回深拷贝的完整开池证据。

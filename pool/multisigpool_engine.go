@@ -737,12 +737,18 @@ func (engine *MultisigPoolEngine) BuildPaymentUpdate(input PaymentUpdateInput) (
 	if err != nil {
 		return nil, err
 	}
-	if err := engine.VerifyAcceptedPayment(input.Previous, input.Opening); err != nil {
-		if arbitrationErr := engine.VerifyArbitratedPayment(input.Previous, input.Opening); arbitrationErr != nil {
-			return nil, invalid("previous payment is not a valid proof-bound accepted state")
+	if !input.BuyerLocal {
+		if err := engine.VerifyAcceptedPayment(input.Previous, input.Opening); err != nil {
+			if arbitrationErr := engine.VerifyArbitratedPayment(input.Previous, input.Opening); arbitrationErr != nil {
+				return nil, invalid("previous payment is not a valid proof-bound accepted state")
+			}
 		}
 	}
-	if input.Previous.PaymentSequence == finalPoolSequence || input.PaymentSequence != input.Previous.PaymentSequence+1 || input.PaymentSequence == finalPoolSequence {
+	if input.Rebuild {
+		if input.Previous.PaymentSequence == finalPoolSequence || input.PaymentSequence <= input.Previous.PaymentSequence || input.PaymentSequence == finalPoolSequence {
+			return nil, staleSequence("rebuilt payment sequence must advance beyond the base state")
+		}
+	} else if input.Previous.PaymentSequence == finalPoolSequence || input.PaymentSequence != input.Previous.PaymentSequence+1 || input.PaymentSequence == finalPoolSequence {
 		return nil, staleSequence("payment sequence must extend previous state by exactly one")
 	}
 	if err := engine.CheckPaymentCapacity(input); err != nil {
@@ -1214,9 +1220,11 @@ func (engine *MultisigPoolEngine) BuildImmediateClose(input CloseInput) (*Unsign
 	if err != nil {
 		return nil, err
 	}
-	if err := engine.VerifyAcceptedPayment(input.Base, input.Opening); err != nil {
-		if arbitrationErr := engine.VerifyArbitratedPayment(input.Base, input.Opening); arbitrationErr != nil {
-			return nil, invalid("base pool state is not a valid accepted or arbitrated payment")
+	if !input.BuyerLocal {
+		if err := engine.VerifyAcceptedPayment(input.Base, input.Opening); err != nil {
+			if arbitrationErr := engine.VerifyArbitratedPayment(input.Base, input.Opening); arbitrationErr != nil {
+				return nil, invalid("base pool state is not a valid accepted or arbitrated payment")
+			}
 		}
 	}
 	if input.Base.PaymentSequence >= finalPoolSequence {

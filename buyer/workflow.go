@@ -267,8 +267,10 @@ func (workflow *workflow) RequestContent(ctx context.Context, facts protocol.Fac
 	if previous.PaymentSequence >= ^uint32(0)-1 {
 		return nil, staleSequenceErr(op)
 	}
-	if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
-		return nil, fmt.Errorf("verify current pool state: %w", err)
+	if !command.Pool.buyerLocal {
+		if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
+			return nil, fmt.Errorf("verify current pool state: %w", err)
+		}
 	}
 	targetSequence := previous.PaymentSequence + 1
 	contentHashes := make([][]byte, len(command.ContentHashes))
@@ -412,8 +414,10 @@ func (workflow *workflow) VerifyDeliveryAndPreparePayment(ctx context.Context, f
 	if previous == nil || previous.RefundTemplateTxID != refundTemplateTxID || previous.PaymentSequence+1 != requestTerms.PaymentSequence {
 		return nil, staleSequenceErr(op)
 	}
-	if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
-		return nil, fmt.Errorf("verify current pool state: %w", err)
+	if !command.Pool.buyerLocal {
+		if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
+			return nil, fmt.Errorf("verify current pool state: %w", err)
+		}
 	}
 	if previous.PaymentSequence >= ^uint32(0)-1 {
 		return nil, staleSequenceErr(op)
@@ -425,7 +429,7 @@ func (workflow *workflow) VerifyDeliveryAndPreparePayment(ctx context.Context, f
 	if previous.SellerAmountSatoshis > ^uint64(0)-price || requestTerms.SellerAmountAfterSatoshis != previous.SellerAmountSatoshis+price {
 		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 7, "seller_amount_after_satoshis", "seller amount does not match aggregate content price")
 	}
-	updateInput := pool.PaymentUpdateInput{Opening: opening, Previous: previous, PaymentSequence: requestTerms.PaymentSequence, SellerAmountAfterSatoshis: requestTerms.SellerAmountAfterSatoshis}
+	updateInput := pool.PaymentUpdateInput{Opening: opening, Previous: previous, PaymentSequence: requestTerms.PaymentSequence, SellerAmountAfterSatoshis: requestTerms.SellerAmountAfterSatoshis, BuyerLocal: command.Pool.buyerLocal}
 	if err := engine.CheckPaymentCapacity(updateInput); err != nil {
 		return nil, err
 	}
@@ -485,7 +489,7 @@ func (workflow *workflow) PrepareClose(ctx context.Context, facts protocol.Facts
 	if base == nil {
 		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 0, "base_payment_state", "base payment state is required")
 	}
-	unsigned, err := engine.BuildImmediateClose(pool.CloseInput{Opening: opening, Base: base, SellerAmountAfterSatoshis: uint64(command.TargetSellerAmountSatoshis)})
+	unsigned, err := engine.BuildImmediateClose(pool.CloseInput{Opening: opening, Base: base, SellerAmountAfterSatoshis: uint64(command.TargetSellerAmountSatoshis), BuyerLocal: command.Pool.buyerLocal})
 	if err != nil {
 		return nil, err
 	}
@@ -720,8 +724,10 @@ func (workflow *workflow) VerifyArbitratedContent(ctx context.Context, command a
 	if previous == nil || previous.RefundTemplateTxID != refundTemplateTxID || previous.PaymentSequence+1 != requestTerms.PaymentSequence {
 		return nil, staleSequenceErr(op)
 	}
-	if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
-		return nil, fmt.Errorf("verify current pool state: %w", err)
+	if !command.Pool.buyerLocal {
+		if err := engine.VerifyAcceptedPayment(previous, opening); err != nil {
+			return nil, fmt.Errorf("verify current pool state: %w", err)
+		}
 	}
 	if previous.SellerAmountSatoshis > ^uint64(0)-price || requestTerms.SellerAmountAfterSatoshis != previous.SellerAmountSatoshis+price {
 		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 11, "seller_amount_after_satoshis", "seller amount does not match aggregate content price")

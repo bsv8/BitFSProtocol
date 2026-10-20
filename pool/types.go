@@ -235,6 +235,14 @@ type PaymentUpdateInput struct {
 	PaymentSequence uint32
 	// SellerAmountAfterSatoshis 是新状态中卖方的累计金额，单位为 satoshi。
 	SellerAmountAfterSatoshis uint64
+
+	// BuyerLocal 标记 Previous 为买方本地付款状态（只有买方签名）。调用方已用
+	// exact Kind 5/7 证据完成验证，因此跳过双签名校验；卖方仍会用它自己保存的
+	// 完整状态核对候选。
+	BuyerLocal bool
+	// Rebuild 表示从基准状态重建一个已声明序号的候选（用于从 Kind 5/7 证据
+	// 重建历史状态），不要求序号恰好为基准 +1；序号仍必须大于基准且非最终值。
+	Rebuild bool
 }
 
 // CloseInput 提供立即关闭资金池、构造最终付款交易所需的开池证据、调用方
@@ -247,6 +255,10 @@ type CloseInput struct {
 	Base *PaymentState
 	// SellerAmountAfterSatoshis 是候选最终关闭状态中卖方的累计金额，单位为 satoshi。
 	SellerAmountAfterSatoshis uint64
+
+	// BuyerLocal 标记 Base 为买方本地付款状态（只有买方签名）：调用方已用
+	// exact Kind 5/7 证据完成验证，因此跳过双签名校验。
+	BuyerLocal bool
 }
 
 // OpeningInput 仅包含构造资金池所需的通用输入数据。

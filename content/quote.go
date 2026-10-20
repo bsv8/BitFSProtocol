@@ -393,7 +393,7 @@ func ContentHashesPriceSatoshis(ctx context.Context, terms *FileQuoteTerms, cont
 	for _, item := range items {
 		price := terms.SeedPriceSatoshis
 		if !item.IsSeed {
-			price, err = blockPriceSatoshis(terms.FullBlockPriceSatoshis, item.BlockSize)
+			price, err = BlockPriceSatoshis(terms.FullBlockPriceSatoshis, item.BlockSize)
 			if err != nil {
 				return 0, err
 			}
@@ -406,9 +406,12 @@ func ContentHashesPriceSatoshis(ctx context.Context, terms *FileQuoteTerms, cont
 	return total, nil
 }
 
-// blockPriceSatoshis prices one block by its protocol expected length using
+// BlockPriceSatoshis prices one block by its protocol expected length using
 // big integers so malformed uint64 prices cannot overflow into a lower amount.
-func blockPriceSatoshis(fullBlockPriceSatoshis, blockSize uint64) (uint64, error) {
+// A tail block (blockSize < 256 KiB) receives the protocol's 10% seller
+// concession; hosts projecting quote terms into their own schedulers must use
+// exactly this price or payment reconciliation will disagree.
+func BlockPriceSatoshis(fullBlockPriceSatoshis, blockSize uint64) (uint64, error) {
 	if blockSize == 0 || blockSize > BlockSize {
 		return 0, fmt.Errorf("invalid block expected size %d", blockSize)
 	}

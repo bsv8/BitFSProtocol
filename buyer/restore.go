@@ -1,6 +1,8 @@
 package buyer
 
 import (
+	"fmt"
+
 	"github.com/bsv8/go-bitfs/content"
 	"github.com/bsv8/go-bitfs/pool"
 	"github.com/bsv8/go-bitfs/protocol"
@@ -117,4 +119,98 @@ func restoreAuthorizationCheckpoint(rawKind1 []byte, rawKind5 []byte, openingPro
 		return nil, err
 	}
 	return &authorizationCheckpoint{authorizationID: authID, request: request}, nil
+}
+
+// restoreBuyerLocalPoolCheckpoint 从买方本地保存的 exact Kind 5 与 exact Kind 7
+// 重建池 checkpoint：只验证买方签名，并把状态推进到该对证据声明的序号与金额；
+// 不声称它是最新状态（状态选择与日志连续性由调用方负责）。与 TypeScript SDK
+// 的 latestBuyerPayment 语义一致。
+func restoreBuyerLocalPoolCheckpoint(rawKind5, rawKind7 []byte, opening *pool.OpeningProof) (*poolCheckpoint, error) {
+	const op = "buyer.restoreBuyerLocalPoolCheckpoint"
+	if opening == nil {
+		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 0, "opening", "pool opening evidence is required")
+	}
+	if len(rawKind5) == 0 || len(rawKind7) == 0 {
+		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 0, "latest_buyer_payment", "kind5 and kind7 evidence are required")
+	}
+	requestArtifact, err := wireParseAsKind5(rawKind5)
+	if err != nil {
+		return nil, err
+	}
+	request, err := wire.DecodeContentRequest(requestArtifact)
+	if err != nil {
+		return nil, err
+	}
+	authorization, err := content.VerifySignedContentRequestForOpening(request, opening)
+	if err != nil {
+		return nil, protocol.Wrap(err, op, protocol.CodeInvalidEvidence, 0, "kind5")
+	}
+	updateArtifact, err := wire.ParseAs(wire.PaymentUpdate, rawKind7)
+	if err != nil {
+		return nil, err
+	}
+	update, err := wire.DecodePaymentUpdate(updateArtifact)
+	if err != nil {
+		return nil, err
+	}
+	authorizationID, err := content.PaymentAuthorizationID(request.PaymentAuthorizationCBOR)
+	if err != nil {
+		return nil, err
+	}
+	if update.PaymentAuthorizationID != authorizationID {
+		return nil, protocol.Errorf(op, protocol.CodeStateConflict, 7, "payment_authorization_id", "kind7 does not reference the given kind5 authorization")
+	}
+	engine, err := pool.NewMultisigPoolEngine(pool.MultisigPoolEngineConfig{
+		BuyerPublicKey:   opening.BuyerPublicKey,
+		SellerPublicKey:  opening.SellerPublicKey,
+		ArbiterPublicKey: opening.ArbiterPublicKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	initialRaw, err := engine.BuildRefundSubmission(opening)
+	if err != nil {
+		return nil, fmt.Errorf("assemble initial refund state: %w", err)
+	}
+	initial, err := engine.ParsePaymentState(initialRaw, opening)
+	if err != nil {
+		return nil, fmt.Errorf("parse initial pool state: %w", err)
+	}
+	if err := engine.VerifyAcceptedPayment(initial, opening); err != nil {
+		return nil, fmt.Errorf("verify initial pool state: %w", err)
+	}
+	if authorization.PaymentSequence <= initial.PaymentSequence || authorization.PaymentSequence == ^uint32(0) {
+		return nil, protocol.Errorf(op, protocol.CodeStateConflict, 0, "payment_sequence", "buyer-local payment sequence is invalid")
+	}
+	unsigned, err := engine.BuildPaymentUpdate(pool.PaymentUpdateInput{
+		Opening:                   opening,
+		Previous:                  initial,
+		PaymentSequence:           authorization.PaymentSequence,
+		SellerAmountAfterSatoshis: authorization.SellerAmountAfterSatoshis,
+		BuyerLocal:                true,
+		Rebuild:                   true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := engine.VerifyBuyerPayment(unsigned, update.BuyerPaymentTransactionSignature, opening); err != nil {
+		return nil, protocol.Wrap(err, op, protocol.CodeInvalidEvidence, 7, "buyer_payment_transaction_signature")
+	}
+	parsed, err := engine.ParseUnsignedPayment(unsigned.RawTx, opening)
+	if err != nil {
+		return nil, err
+	}
+	state := &pool.PaymentState{
+		RefundTemplateTxID:        parsed.RefundTemplateTxID,
+		RawTx:                     append([]byte(nil), unsigned.RawTx...),
+		PaymentSequence:           parsed.PaymentSequence,
+		BuyerAmountSatoshis:       parsed.BuyerAmountSatoshis,
+		SellerAmountSatoshis:      parsed.SellerAmountSatoshis,
+		ArbiterAmountSatoshis:     parsed.ArbiterAmountSatoshis,
+		PaymentAuthorizationID:    authorizationID,
+		BuyerTransactionSignature: append([]byte(nil), update.BuyerPaymentTransactionSignature...),
+		PoolOutputSatoshis:        parsed.PoolOutputSatoshis,
+		PoolLockingScript:         append([]byte(nil), parsed.PoolLockingScript...),
+	}
+	return &poolCheckpoint{opening: pool.CloneOpeningProof(opening), payment: state, buyerLocal: true}, nil
 }

@@ -49,6 +49,11 @@ func CompleteOpening(opening BuyerOpeningEvidence, rawKind3 []byte) (completed B
 // Artifact；不广播资金交易——广播边界属于应用。
 func PrepareFundingDelivery(evidence BuyerPoolEvidence) (outbound wire.Artifact, err error)
 
+// InspectPool 返回普通证据包当前证明的付款序号与累计卖方金额（satoshi）：
+// 初始状态、完整双签交易或买方本地 Kind 5/7 对都可以；只解析并全量重验证据
+// 本身，不声称返回的是最新状态。
+func InspectPool(evidence BuyerPoolEvidence) (paymentSequence protocol.PaymentSequence, sellerAmountSatoshis protocol.Satoshis, err error)
+
 // PrepareContentRequest 验证报价/池/批次上下文/聚合价格/余额后签署 exact
 // Kind 5：返回待发送 Artifact 与必须先持久化的普通授权证据包。
 func PrepareContentRequest(ctx context.Context, facts protocol.Facts, input RequestContentInput, signer protocol.Signer) (outbound wire.Artifact, evidence BuyerAuthorizationEvidence, err error)
@@ -81,7 +86,8 @@ func RequestArbitratedContent(ctx context.Context, input RetrievalRequestInput, 
 func VerifyArbitratedContent(ctx context.Context, input ArbitratedContentInput) (result *ArbitratedContentResult, err error)
 ```
 
-普通证据包（只含原始字节，可序列化；省略 `LatestPaymentRawTx` 表示初始退款状态）：
+普通证据包（只含原始字节，可序列化；`LatestPaymentRawTx` 与 `LatestBuyerPayment`
+互斥，两者都省略表示初始退款状态）：
 
 ```go
 type BuyerOpeningEvidence struct {
@@ -93,6 +99,15 @@ type BuyerOpeningEvidence struct {
 type BuyerPoolEvidence struct {
     Opening            *pool.OpeningProof // 完整开池证明（普通数据）
     LatestPaymentRawTx []byte             // 链上最新完整付款交易原文；省略=初始状态
+    // 买方本地保存的 exact Kind 5/7 证据对：递进付款逐笔上链前，买方用它推进
+    // 下一轮采购；只能证明该状态成立，不能证明它是最新状态（日志连续性由
+    // 调用方负责）。与 LatestPaymentRawTx 不能同时提供。
+    LatestBuyerPayment *BuyerPaymentEvidence
+}
+
+type BuyerPaymentEvidence struct {
+    RawKind5 []byte // 本次付款的 exact Kind 5 授权
+    RawKind7 []byte // 同一授权的 exact Kind 7 交易签名
 }
 
 type BuyerAuthorizationEvidence struct {

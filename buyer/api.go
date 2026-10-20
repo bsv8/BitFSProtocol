@@ -35,12 +35,25 @@ type BuyerOpeningEvidence struct {
 // 付款状态原文。省略 LatestPaymentRawTx 表示池仍处于初始退款状态，SDK 会从
 // opening 重建初始状态；提供时 SDK 逐字节解析并全量重验它，绝不信任调用方
 // 声明的序号或金额。
+// BuyerPaymentEvidence 是一对买方本地付款证据：exact Kind 5 授权与对同一
+// 授权的 exact Kind 7 交易签名。它只能证明该状态成立，不能证明它是最新状态；
+// 状态选择与日志连续性由调用方负责。
+type BuyerPaymentEvidence struct {
+	// RawKind5 是本次付款的 exact Kind 5 授权字节。
+	RawKind5 []byte
+	// RawKind7 是对同一授权的 exact Kind 7 更新签名字节。
+	RawKind7 []byte
+}
+
 type BuyerPoolEvidence struct {
 	// Opening 是含资金交易原文的完整开池证明（普通数据，可深拷贝）。
 	Opening *pool.OpeningProof
-	// LatestPaymentRawTx 是链上取得的最新完整付款交易原文；省略（nil/空）
-	// 表示初始退款状态。不得填写未上链的本地候选。
+	// LatestPaymentRawTx 是链上或本地保存的最新完整双签付款交易原文；省略
+	// （nil/空）表示初始退款状态。与 LatestBuyerPayment 互斥。
 	LatestPaymentRawTx []byte
+	// LatestBuyerPayment 是买方本地保存的 Kind 5/7 付款证据；与
+	// LatestPaymentRawTx 互斥。用于在多轮采购间本地推进池状态。
+	LatestBuyerPayment *BuyerPaymentEvidence
 }
 
 // BuyerAuthorizationEvidence 是一次已签授权的普通证据包：exact Kind 1 报价
@@ -536,6 +549,18 @@ func publicKeyOf(raw []byte) protocol.PublicKey {
 	return publicKey
 }
 
+// InspectPool 返回普通证据包当前证明的付款序号与累计卖方金额（satoshi）。
+// 它只解析并全量重验证据本身：初始状态、完整双签交易或买方本地 Kind 5/7 对
+// 都可以；不声称返回的是最新状态，日志连续性由调用方负责。
+func InspectPool(evidence BuyerPoolEvidence) (protocol.PaymentSequence, protocol.Satoshis, error) {
+	const op = "buyer.InspectPool"
+	checkpoint, err := internalPoolCheckpoint(evidence)
+	if err != nil {
+		return 0, 0, protocol.Wrap(err, op, protocol.CodeInvalidEvidence, 0, "pool")
+	}
+	return protocol.PaymentSequence(checkpoint.payment.PaymentSequence), protocol.Satoshis(checkpoint.payment.SellerAmountSatoshis), nil
+}
+
 // internalPoolCheckpoint 把普通证据包还原为内部池状态：opening 全量重验，
 // 付款状态要么由 opening 重建初始退款状态，要么逐字节解析调用方提供的
 // 链上交易原文并全量重验；绝不接受调用方声明的序号或金额。
@@ -551,6 +576,12 @@ func internalPoolCheckpoint(evidence BuyerPoolEvidence) (*poolCheckpoint, error)
 	}
 	if err := engine.VerifyOpening(opening); err != nil {
 		return nil, err
+	}
+	if evidence.LatestBuyerPayment != nil {
+		if len(evidence.LatestPaymentRawTx) != 0 {
+			return nil, protocol.Errorf(op, protocol.CodeStateConflict, 0, "buyer_pool", "latestPaymentRawTx and latestBuyerPayment cannot be combined")
+		}
+		return restoreBuyerLocalPoolCheckpoint(evidence.LatestBuyerPayment.RawKind5, evidence.LatestBuyerPayment.RawKind7, opening)
 	}
 	if len(evidence.LatestPaymentRawTx) == 0 {
 		initialRaw, err := engine.BuildRefundSubmission(opening)
