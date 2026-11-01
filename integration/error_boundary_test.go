@@ -5,13 +5,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/buyer"
-	"github.com/bsv8/go-bitfs/internal/flowtest/seller"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	wire "github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/buyer"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/seller"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	wire "github.com/bsv8/BitFSProtocol/wire"
 )
 
 // TestPublicRoleErrorsAlwaysClassified 锁定统一错误模型的边界契约：

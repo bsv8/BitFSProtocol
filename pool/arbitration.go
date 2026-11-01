@@ -18,9 +18,9 @@ import (
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
 	"github.com/bsv-blockchain/go-sdk/transaction/template/p2pkh"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	mp "github.com/bsv8/MultisigPool/v4/pkg"
 	libs "github.com/bsv8/MultisigPool/v4/pkg/libs"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 const (

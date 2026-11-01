@@ -3,10 +3,10 @@ package buyer
 import (
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 func wireParseAsKind2(raw []byte) (wire.Artifact, error) {

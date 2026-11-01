@@ -120,7 +120,7 @@ go test -mod=vendor -count=1 ./buyer ./seller ./pool
 go test -race -mod=vendor -count=1 ./buyer ./seller ./pool
 
 # 使用只编译不执行的方式验证 Windows build；输出必须位于 /tmp
-GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./pool -o /tmp/go-bitfs-pool-windows.test.exe
+GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./pool -o /tmp/BitFSProtocol-pool-windows.test.exe
 
 go test -mod=readonly -count=1 ./...
 go test -mod=vendor -count=1 ./...
@@ -167,11 +167,11 @@ go test -race -mod=vendor -count=1 ./...
 go vet -mod=vendor ./...
 
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./pool \
-  -o /tmp/go-bitfs-pool-windows.test.exe
+  -o /tmp/BitFSProtocol-pool-windows.test.exe
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./buyer \
-  -o /tmp/go-bitfs-buyer-windows.test.exe
+  -o /tmp/BitFSProtocol-buyer-windows.test.exe
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./seller \
-  -o /tmp/go-bitfs-seller-windows.test.exe
+  -o /tmp/BitFSProtocol-seller-windows.test.exe
 
 cd website && npm run check
 

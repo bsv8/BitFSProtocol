@@ -16,9 +16,9 @@ import (
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
 	sighash "github.com/bsv-blockchain/go-sdk/transaction/sighash"
+	"github.com/bsv8/BitFSProtocol/internal/refundlock"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	mp "github.com/bsv8/MultisigPool/v4/pkg"
-	"github.com/bsv8/go-bitfs/internal/refundlock"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 const finalPoolSequence = ^uint32(0)

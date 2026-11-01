@@ -5,7 +5,7 @@ title: BitFS SDK API framework
 
 # BitFS SDK API framework
 
-go-bitfs is the executable protocol specification for 001–008. It is a
+BitFSProtocol is the executable protocol specification for 001–008. It is a
 **stateless, infrastructure-side-effect-free protocol SDK**: pure role steps in
 `buyer`, `seller`, and `arbiter` hold only the constrained signer fixed at
 construction (`protocol.Signer`; local software keys enter through

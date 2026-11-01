@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // DeriveRefundTemplateTxID returns the stable pool correlation ID: the

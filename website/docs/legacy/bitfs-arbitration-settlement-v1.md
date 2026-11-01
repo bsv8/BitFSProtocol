@@ -7,7 +7,7 @@ title: BitFS Arbitration and 2-of-3 Settlement Specification v1
 
 > **Historical compatibility document, not to be used as a basis for new construction.** The `HashGetTicket`, `session_id`, server-side records, `proposal_id`, arbitration final amounts, and signature domains described herein belong to the legacy V1 design. The current design is governed by [001-Quote Credential Spec](../protocol/001-quote-credential-spec.md) through [006-Unconditional Pool Close Spec](../protocol/006-unconditional-pool-close-spec.md); notably, the V1 close path does not define arbitration amounts within the pool.
 
-Arbitration is a core part of BitFS transactions. It is accomplished jointly by two protocol layers, both provided by `go-bitfs`.
+Arbitration is a core part of BitFS transactions. It is accomplished jointly by two protocol layers, both provided by `BitFSProtocol`.
 
 ## Code Roles
 

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bsv8/BitFSProtocol/protocol"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 // Kind 5/Kind 6 wire kind values for the unified signature context.

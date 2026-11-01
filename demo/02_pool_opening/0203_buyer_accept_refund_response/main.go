@@ -14,10 +14,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/demo/internal/poolopening"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/demo/internal/poolopening"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 func main() {

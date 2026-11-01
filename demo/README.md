@@ -4,7 +4,7 @@
 
 ## 责任边界：SDK 无状态、无基础设施副作用
 
-go-bitfs SDK 是无状态的 BitFS Wire Protocol v1 协议库：角色 workflow 只持有构造时固定的受约束 Signer（本地软件私钥经 `protocol.NewPrivateKeySigner` 进入），每个方法都是「显式输入 + 显式事实 → 计算结果」，不加载、不保存、不发送、不广播任何状态；时间与区块高度由调用方以 `protocol.Facts{Now, BlockHeight}` 显式传入，SDK 不读系统时钟、不查节点。数据库/文件存储、事务与锁、并发串行化、重试/幂等、节点广播与链上对账全部属于调用方应用。
+BitFSProtocol SDK 是无状态的 BitFS Wire Protocol v1 协议库：角色 workflow 只持有构造时固定的受约束 Signer（本地软件私钥经 `protocol.NewPrivateKeySigner` 进入），每个方法都是「显式输入 + 显式事实 → 计算结果」，不加载、不保存、不发送、不广播任何状态；时间与区块高度由调用方以 `protocol.Facts{Now, BlockHeight}` 显式传入，SDK 不读系统时钟、不查节点。数据库/文件存储、事务与锁、并发串行化、重试/幂等、节点广播与链上对账全部属于调用方应用。
 
 为了让多个独立命令能够衔接运行，demo 自己实现了一些最简持久化：002 使用 `DEMO_02_STATE_DIR` 下的 JSON checkpoint，其余步骤使用进程内的内存 fixture。这些只是示例应用行为，不是 SDK 能力，也不构成生产建议。checkpoint 是直接整文件写入的简单示例：没有原子性保证，不承诺并发、事务或崩溃安全；真实应用应使用自己的数据库与一致性策略。
 

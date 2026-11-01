@@ -74,10 +74,10 @@ export function verifyWireDocument (publicKey: Uint8Array, kind: WireKind, docum
 
 /** 通过受约束 Signer 签署并用构造时公钥立即自验。 */
 export async function signWireDocument (signer: Signer, kind: WireKind, documentCBOR: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
-  const finish = bitfsDebugStart('go-bitfs', 'sign.wire')
+  const finish = bitfsDebugStart('BitFSProtocol', 'sign.wire')
   try {
     const result = await signWireDocumentExact(signer, kind, documentCBOR, signal)
-    bitfsDebug('go-bitfs', 'sign.wire.accepted', () => ({ kind, documentBytes: documentCBOR.byteLength, signatureBytes: result.byteLength }))
+    bitfsDebug('BitFSProtocol', 'sign.wire.accepted', () => ({ kind, documentBytes: documentCBOR.byteLength, signatureBytes: result.byteLength }))
     finish()
     return result
   } catch (error) { finish(error); throw error }

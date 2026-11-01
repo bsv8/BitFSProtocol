@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 func bytes32(value byte) []byte { return bytes.Repeat([]byte{value}, 32) }

@@ -1,10 +1,10 @@
 package wire
 
 import (
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	bitfsdebug "github.com/bsv8/go-bitfs/debug"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	bitfsdebug "github.com/bsv8/BitFSProtocol/debug"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	"time"
 )
 
@@ -129,7 +129,7 @@ func decodeArtifact(artifact Artifact) error {
 func Parse(raw []byte) (result Artifact, failure error) {
 	started := time.Now()
 	defer func() {
-		bitfsdebug.Log("go-bitfs", "wire.parse", func() any {
+		bitfsdebug.Log("BitFSProtocol", "wire.parse", func() any {
 			return map[string]any{"kind": result.Kind(), "bytes": len(raw), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
 		})
 	}()
@@ -156,7 +156,7 @@ func Parse(raw []byte) (result Artifact, failure error) {
 func ParseAs(expected Kind, raw []byte) (result Artifact, failure error) {
 	started := time.Now()
 	defer func() {
-		bitfsdebug.Log("go-bitfs", "wire.parse-as", func() any {
+		bitfsdebug.Log("BitFSProtocol", "wire.parse-as", func() any {
 			return map[string]any{"expectedKind": expected, "kind": result.Kind(), "bytes": len(raw), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
 		})
 	}()

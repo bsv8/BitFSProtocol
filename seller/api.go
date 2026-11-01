@@ -11,12 +11,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	bitfsdebug "github.com/bsv8/go-bitfs/debug"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	bitfsdebug "github.com/bsv8/BitFSProtocol/debug"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // SellerOpeningEvidence 是卖方预签阶段的普通证据包：保存买方 exact Kind 2
@@ -159,7 +159,7 @@ type CompleteArbitratedPaymentInput struct {
 // 编码与签名，返回待发送 exact Kind 1 与最终规范化 terms（展示实际签署值）。
 // 唯一时间事实为 facts.Now；签名能力只在本调用内使用。
 func CreateQuote(ctx context.Context, facts protocol.Facts, signer protocol.Signer, draft QuoteDraft) (wire.Artifact, *content.FileQuoteTerms, error) {
-	bitfsdebug.Log("go-bitfs", "seller.quote.create", func() any { return map[string]any{"facts": facts} })
+	bitfsdebug.Log("BitFSProtocol", "seller.quote.create", func() any { return map[string]any{"facts": facts} })
 	workflow, err := newWorkflow(signer)
 	if err != nil {
 		return wire.Artifact{}, nil, err
@@ -246,7 +246,7 @@ func InspectDeliveryRequest(facts protocol.Facts, input InspectDeliveryRequestIn
 // 签署 Kind 6，返回待发送 exact Kind 6 与普通证据包。Send 之前应用必须先
 // 持久化 payload 与本证据包。
 func PrepareDelivery(ctx context.Context, facts protocol.Facts, input DeliveryInput, signer protocol.Signer) (wire.Artifact, SellerDeliveryEvidence, error) {
-	bitfsdebug.Log("go-bitfs", "seller.delivery.prepare", func() any { return map[string]any{"facts": facts} })
+	bitfsdebug.Log("BitFSProtocol", "seller.delivery.prepare", func() any { return map[string]any{"facts": facts} })
 	workflow, err := newWorkflow(signer)
 	if err != nil {
 		return wire.Artifact{}, SellerDeliveryEvidence{}, err
@@ -282,7 +282,7 @@ func PrepareDelivery(ctx context.Context, facts protocol.Facts, input DeliveryIn
 // 补签并合并完整交易。返回完整交易原文与付款后的普通证据包；是否广播由
 // 应用决定，SDK 不声称节点接受。
 func CompletePayment(ctx context.Context, facts protocol.Facts, input CompletePaymentInput, signer protocol.Signer) ([]byte, SellerPoolEvidence, error) {
-	bitfsdebug.Log("go-bitfs", "seller.payment.complete", func() any { return map[string]any{"facts": facts} })
+	bitfsdebug.Log("BitFSProtocol", "seller.payment.complete", func() any { return map[string]any{"facts": facts} })
 	const op = "seller.CompletePayment"
 	workflow, err := newWorkflow(signer)
 	if err != nil {
@@ -333,7 +333,7 @@ func CompletePayment(ctx context.Context, facts protocol.Facts, input CompletePa
 // 它不读取任何卖方数据库金额，也不判断 candidate 是否匹配业务目标；返回的
 // 完整交易原文是否广播由应用决定。
 func CompleteClose(ctx context.Context, facts protocol.Facts, input CompleteCloseInput, signer protocol.Signer) ([]byte, error) {
-	bitfsdebug.Log("go-bitfs", "seller.close.complete", func() any { return map[string]any{"facts": facts} })
+	bitfsdebug.Log("BitFSProtocol", "seller.close.complete", func() any { return map[string]any{"facts": facts} })
 	workflow, err := newWorkflow(signer)
 	if err != nil {
 		return nil, err

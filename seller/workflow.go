@@ -6,11 +6,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // workflow 是 Seller 角色 API（001–007）。它只持有固定的受约束 Signer 及其

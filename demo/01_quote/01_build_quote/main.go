@@ -19,11 +19,11 @@ import (
 	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
 )
 
 // blockHeight 是调用方认可并提供的当前区块高度；SDK 不查询节点。

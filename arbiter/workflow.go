@@ -6,10 +6,10 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // workflow 是持有 Arbiter 签名能力的 007/008 角色编排。除固定的 Signer 公钥

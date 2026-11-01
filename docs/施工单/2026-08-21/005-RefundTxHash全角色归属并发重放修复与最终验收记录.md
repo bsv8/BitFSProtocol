@@ -151,11 +151,11 @@ go test -mod=vendor -count=25 ./integration \
   -run '^(TestWrongArbiterSignerDoesNotSignValidArbitrationEvidence|TestWrongBuyerCannotSubmitOrRefundSharedPool|TestWrongSellerPresignAndIdempotentPaymentCannotMutateSharedPool|TestWrongSellerCannotSubmitArbitratedPayment)$'
 
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./pool \
-  -o /tmp/go-bitfs-pool-windows.test.exe
+  -o /tmp/BitFSProtocol-pool-windows.test.exe
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./buyer \
-  -o /tmp/go-bitfs-buyer-windows.test.exe
+  -o /tmp/BitFSProtocol-buyer-windows.test.exe
 GOOS=windows GOARCH=amd64 go test -mod=vendor -run '^$' -c ./seller \
-  -o /tmp/go-bitfs-seller-windows.test.exe
+  -o /tmp/BitFSProtocol-seller-windows.test.exe
 
 cd website && npm run check
 

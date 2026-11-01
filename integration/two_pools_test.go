@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/buyer"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/seller"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/internal/flowtest/buyer"
-	"github.com/bsv8/go-bitfs/internal/flowtest/seller"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 func openNamedPool(t *testing.T, f *protocolFixture, satoshis uint64) *openedPool {

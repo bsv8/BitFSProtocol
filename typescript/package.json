@@ -1,16 +1,16 @@
 {
-  "name": "go-bitfs",
-  "version": "0.5.0",
+  "name": "bitfs-protocol",
+  "version": "0.5.1",
   "description": "BitFS Wire Protocol v1 TypeScript SDK\uff08\u5b57\u6bb5\u4e2d\u6587\u8bf4\u660e\u89c1 README \u4e0e\u7c7b\u578b\u6ce8\u91ca\uff09",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bsv8/go-bitfs.git",
+    "url": "git+https://github.com/bsv8/BitFSProtocol.git",
     "directory": "typescript"
   },
-  "homepage": "https://github.com/bsv8/go-bitfs#readme",
+  "homepage": "https://github.com/bsv8/BitFSProtocol#readme",
   "bugs": {
-    "url": "https://github.com/bsv8/go-bitfs/issues"
+    "url": "https://github.com/bsv8/BitFSProtocol/issues"
   },
   "type": "module",
   "exports": {
@@ -63,7 +63,7 @@
     "@bsv/sdk": "2.0.5",
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
-    "bitcoin-libp2p": "0.3.0",
+    "bitcoin-libp2p": "0.3.2",
     "keymaster-multisig-pool": "4.0.0",
     "masterseed": "1.1.0"
   },

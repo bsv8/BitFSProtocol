@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/arbiter"
-	"github.com/bsv8/go-bitfs/internal/flowtest/buyer"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/arbiter"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/buyer"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // 本文件覆盖验收要求的强制场景：Seller/Arbiter Restore 全量重验往返、伪造

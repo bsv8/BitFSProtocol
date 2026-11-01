@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // VerifiedQuote 是字段私有、访问器防御性复制的已验证报价：它证明卖方签名、

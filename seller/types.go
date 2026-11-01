@@ -1,10 +1,10 @@
 package seller
 
 import (
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // 本文件定义 Seller 角色 API 的 Command / Result / opaque checkpoint。

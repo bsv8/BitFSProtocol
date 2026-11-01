@@ -7,7 +7,7 @@ await writeFile('generated-api/index.md', `---\nid: index\ntitle: API Reference\
 
 const packages = ['protocol', 'content', 'pool', 'arbitration', 'wire', 'buyer', 'seller', 'arbiter'];
 const run = (pkg) => new Promise((resolve, reject) => {
-  const child = spawn('go', ['run', '-mod=mod', 'github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0', '-o', `generated-api/${pkg}.md`, `github.com/bsv8/go-bitfs/${pkg}`], {stdio: 'inherit', env: {...process.env, GOWORK: 'off', GOFLAGS: ''}});
+  const child = spawn('go', ['run', '-mod=mod', 'github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0', '-o', `generated-api/${pkg}.md`, `github.com/bsv8/BitFSProtocol/${pkg}`], {stdio: 'inherit', env: {...process.env, GOWORK: 'off', GOFLAGS: ''}});
   child.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`gomarkdoc failed for ${pkg} (${code})`)));
   child.on('error', reject);
 });

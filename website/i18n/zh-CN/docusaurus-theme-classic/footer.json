@@ -17,10 +17,10 @@
   },
   "link.item.label.GitHub": {
     "message": "GitHub",
-    "description": "The label of footer link with label=GitHub linking to https://github.com/bsv8/go-bitfs"
+    "description": "The label of footer link with label=GitHub linking to https://github.com/bsv8/BitFSProtocol"
   },
   "copyright": {
-    "message": "Copyright © 2026 go-bitfs contributors.",
+    "message": "Copyright © 2026 BitFSProtocol contributors.",
     "description": "The footer copyright"
   }
 }

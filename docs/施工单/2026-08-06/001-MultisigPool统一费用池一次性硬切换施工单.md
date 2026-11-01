@@ -2,15 +2,15 @@
 
 ## 0. 施工性质与唯一真值
 
-本施工单定义 go-bitfs 从旧费用池实现和
+本施工单定义 BitFSProtocol 从旧费用池实现和
 `github.com/bsv8/MultisigPool v0.1.0` 一次性切换到：
 
 ```text
 github.com/bsv8/MultisigPool/v4 v4.0.0
 MultisigPool protocol = bitfs.pool.v4
 MultisigPool version  = 4
-go-bitfs workflow    = bitfs.pool.workflow.v3
-go-bitfs major       = 3
+BitFSProtocol workflow    = bitfs.pool.workflow.v3
+BitFSProtocol major       = 3
 ```
 
 本次是破坏式硬切换。不提供双栈、兼容别名、自动识别旧协议、灰度开关、旧实现回退或静默迁移。最终依赖必须使用正式 v4.0.0 版本，不得使用本地 `replace`、分支、浮动提交或脏工作区目录。
@@ -34,7 +34,7 @@ MultisigPool v4 的角色和锁定顺序永久固定为：
 [Buyer, Seller, Arbiter]
 ```
 
-go-bitfs 的所有公钥、输出归属、签名和合并调用都必须使用 v4 的角色对象，禁止再使用 `server`、`A`、`B` 作为当前 API 语义。
+BitFSProtocol 的所有公钥、输出归属、签名和合并调用都必须使用 v4 的角色对象，禁止再使用 `server`、`A`、`B` 作为当前 API 语义。
 
 ## 2. 链上交易真值
 
@@ -48,11 +48,11 @@ MultisigPool v4 是费用池交易的唯一真值，负责：
 - Buyer+Seller、Buyer+Arbiter、Seller+Arbiter 合并；
 - 输入、输出、金额、协议和签名验证。
 
-go-bitfs 只负责业务对象转换、调用编排、持久化和节点提交，不得复制脚本、P2PKH 输出、费用公式、sighash、签名排序或交易构造算法。
+BitFSProtocol 只负责业务对象转换、调用编排、持久化和节点提交，不得复制脚本、P2PKH 输出、费用公式、sighash、签名排序或交易构造算法。
 
 ### 2.1 输出布局
 
-go-bitfs 当前业务产生的每个状态交易都必须恰好有三个输出：
+BitFSProtocol 当前业务产生的每个状态交易都必须恰好有三个输出：
 
 | 输出 | 固定归属 | 约束 |
 |---|---|---|
@@ -60,7 +60,7 @@ go-bitfs 当前业务产生的每个状态交易都必须恰好有三个输出�
 | output[1] | Seller | Seller 的绝对累计金额 |
 | output[2] | Arbiter | 固定为 0 sat，作为 v4 角色输出保留 |
 
-业务状态不携带 `PaymentProof`，因此不得产生第四个 OP_RETURN 输出。官方 MultisigPool v4 通用 fixture 可以覆盖 PaymentProof 和非零 ArbiterAmount 的库能力，但 go-bitfs 当前业务适配必须严格使用三输出、零 ArbiterAmount。
+业务状态不携带 `PaymentProof`，因此不得产生第四个 OP_RETURN 输出。官方 MultisigPool v4 通用 fixture 可以覆盖 PaymentProof 和非零 ArbiterAmount 的库能力，但 BitFSProtocol 当前业务适配必须严格使用三输出、零 ArbiterAmount。
 
 ### 2.2 序号和最终状态
 
@@ -137,7 +137,7 @@ github.com/bsv8/MultisigPool/v4 v4.0.0
 旧 `github.com/bsv8/MultisigPool`、旧 triple endpoint、旧 fixture 和旧公共 API 必须从活动代码和 vendor 删除。官方 v4 仓库的
 `testdata/arbitrated_pool_v4_fixture.json` 是跨仓字节真值。
 
-### go-bitfs
+### BitFSProtocol
 
 - `pool/multisigpool_engine.go` 只做 v4 适配和验证编排；
 - 不得保留第二套脚本、费用、sighash、输出或签名合并算法；
@@ -185,4 +185,4 @@ git diff --check
 
 只有代码、不可变依赖、CBOR、存储 schema、官方跨仓 fixture、正常支付、买方拒签仲裁、到期退款、文档和干净 checkout 验证同时通过，施工单才算完成。
 
-“go-bitfs 能调用 MultisigPool v4”不等于完成；任何旧角色、旧 major、旧两输出状态、半签交易、第二套费用池真值、未提交实现或文档冲突，均判定硬切换未完成。
+“BitFSProtocol 能调用 MultisigPool v4”不等于完成；任何旧角色、旧 major、旧两输出状态、半签交易、第二套费用池真值、未提交实现或文档冲突，均判定硬切换未完成。

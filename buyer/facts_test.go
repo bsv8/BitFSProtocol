@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/seller"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/seller"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // 本文件锁定显式事实的按需读取契约：refund 门禁只读取锁定类型对应的那一份

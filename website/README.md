@@ -1,4 +1,4 @@
-# go-bitfs documentation
+# BitFSProtocol documentation
 
 This site is a Docusaurus 3 documentation site. English is the normative website language at `/`; the maintained Simplified Chinese translation is at `/zh-CN/`. Translation files live only under `website/i18n/zh-CN/` and are produced and reviewed outside the production build.
 

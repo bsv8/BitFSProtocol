@@ -9,7 +9,7 @@ package wire
 import (
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // ProtocolFamily 是外部协议族/manifest 标识字符串（wire 报文本身只携带

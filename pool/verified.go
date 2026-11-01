@@ -3,7 +3,7 @@ package pool
 import (
 	"bytes"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // VerifiedOpening 是字段私有、访问器防御性复制的已验证开池证明：它证明退款

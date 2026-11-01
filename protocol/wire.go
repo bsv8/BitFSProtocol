@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	bitfsdebug "github.com/bsv8/go-bitfs/debug"
+	bitfsdebug "github.com/bsv8/BitFSProtocol/debug"
 	"math/big"
 	"time"
 
@@ -72,9 +72,9 @@ func WireSignatureDigest(wireVersion, wireKind uint64, documentCBOR []byte) (Dig
 // 日志或持久化结构。
 func SignWireDocument(ctx context.Context, signer Signer, wireVersion, wireKind uint64, documentCBOR []byte) (result []byte, failure error) {
 	started := time.Now()
-	bitfsdebug.Log("go-bitfs", "sign.wire.start", func() any { return map[string]any{"kind": wireKind, "documentBytes": len(documentCBOR)} })
+	bitfsdebug.Log("BitFSProtocol", "sign.wire.start", func() any { return map[string]any{"kind": wireKind, "documentBytes": len(documentCBOR)} })
 	defer func() {
-		bitfsdebug.Log("go-bitfs", "sign.wire.finish", func() any {
+		bitfsdebug.Log("BitFSProtocol", "sign.wire.finish", func() any {
 			return map[string]any{"kind": wireKind, "signatureBytes": len(result), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
 		})
 	}()

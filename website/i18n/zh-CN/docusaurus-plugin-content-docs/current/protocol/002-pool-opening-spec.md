@@ -7,7 +7,7 @@ title: 002 · 费用池开闭规范
 
 Buyer 使用 MultisigPool v4 的 `ArbitratedPoolRoles{Buyer, Seller, Arbiter}` 创建池锁，公钥顺序固定为 `[Buyer, Seller, Arbiter]`。
 
-Opening/refund state 必须恰好包含三个资金输出：Buyer、Seller、Arbiter。Seller 和 Arbiter 初始金额为 0，Arbiter 输出仍必须存在。Opening sequence 由 MultisigPool 依赖返回，当前为 2；go-bitfs 不重写 sequence、locktime、手续费或脚本。
+Opening/refund state 必须恰好包含三个资金输出：Buyer、Seller、Arbiter。Seller 和 Arbiter 初始金额为 0，Arbiter 输出仍必须存在。Opening sequence 由 MultisigPool 依赖返回，当前为 2；BitFSProtocol 不重写 sequence、locktime、手续费或脚本。
 
 Buyer 对无签名 RefundTx 产生 detached Buyer signature，Seller 对同一无签名交易产生 detached Seller signature。双方保存完整 OpeningProof 后才交付/广播 FundingTx。到期退款只通过 `MergeArbitratedPoolBuyerSellerSignatures` 合并。
 

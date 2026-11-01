@@ -1,4 +1,4 @@
-# go-bitfs TypeScript SDK
+# BitFSProtocol TypeScript SDK
 
 本目录是 BitFS Wire Protocol v1 的 TypeScript 实现。Go 与 TypeScript 测试共同读取
 仓库根 `fixtures/manifest.json` 指向的冻结真值，不维护第二份协议期望值。

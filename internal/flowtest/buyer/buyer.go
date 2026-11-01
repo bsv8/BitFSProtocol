@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	realbuyer "github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	realbuyer "github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // Workflow 是测试用买方会话：只固定 Signer 与公钥，不保存任何协议进度。

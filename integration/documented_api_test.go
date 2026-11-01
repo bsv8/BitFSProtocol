@@ -11,13 +11,13 @@ import (
 	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/arbiter"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/buyer"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/seller"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/arbiter"
-	"github.com/bsv8/go-bitfs/internal/flowtest/buyer"
-	"github.com/bsv8/go-bitfs/internal/flowtest/seller"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
 )
 
 // TestDocumentedMainPathSignerWorkflowQuoteAccept mirrors the README quick
@@ -78,7 +78,7 @@ func TestDocumentedMainPathSignerWorkflowQuoteAccept(t *testing.T) {
 		SupportedArbiterPublicKeys: []protocol.PublicKey{typedArbiter},
 		RecommendedFilename:        "file.bin",
 		MaxBlocksPerBatch:          64,
-		MediaType: "application/octet-stream",
+		MediaType:                  "application/octet-stream",
 	})
 	if err != nil {
 		t.Fatal(err)

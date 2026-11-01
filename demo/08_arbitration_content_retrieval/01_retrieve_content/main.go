@@ -17,14 +17,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/bsv8/go-bitfs/arbiter"
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/demo/internal/fixture"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbiter"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/demo/internal/fixture"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // demoFeePolicy 是应用层计费策略示例：按 exact ContentPayloadsCBOR 长度阶梯

@@ -1,4 +1,4 @@
-module github.com/bsv8/go-bitfs
+module github.com/bsv8/BitFSProtocol
 
 go 1.26.0
 
@@ -6,7 +6,7 @@ require (
 	github.com/bsv-blockchain/go-sdk v1.2.18
 	github.com/bsv8/MasterSeed v1.1.0
 	github.com/bsv8/MultisigPool/v4 v4.0.0
-	github.com/bsv8/bitcoin-libp2p v0.3.0
+	github.com/bsv8/bitcoin-libp2p v0.3.2
 	github.com/fxamacker/cbor/v2 v2.9.2
 )
 

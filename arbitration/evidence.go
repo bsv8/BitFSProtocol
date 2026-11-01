@@ -5,9 +5,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // validateRequestEvidence performs the complete pre-signature evidence chain:

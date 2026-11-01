@@ -15,14 +15,14 @@ import (
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/arbiter"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/seller"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/arbiter"
-	"github.com/bsv8/go-bitfs/internal/flowtest/seller"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
 )
 
 const (

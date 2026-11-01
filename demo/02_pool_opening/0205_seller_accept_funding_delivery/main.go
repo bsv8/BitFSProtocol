@@ -14,11 +14,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/demo/internal/poolopening"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/seller"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/demo/internal/poolopening"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/seller"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // wireParseAsFunding / wireDecodeFunding 是展示层的严格解码 helper：

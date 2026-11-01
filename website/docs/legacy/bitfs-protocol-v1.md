@@ -7,7 +7,7 @@ title: BitFS Protocol Specification v1
 
 > **Historical compatibility document; not to be used as a basis for new implementation.** The `FileQuote`, `HashGetTicket`, `session_id`, `content_index`, `expected_size`, ticket pricing, and signing domains described in this document belong to the legacy V1 session model. The new design follows business order and is governed by [001-Quote Credential Spec](../protocol/001-quote-credential-spec.md) through [006-Unconditional Pool Close Spec](../protocol/006-unconditional-pool-close-spec.md); new implementations MUST NOT mix the two sets of fields or treat the session ID in this file as a source of truth.
 
-This document describes the business rules of BitFS. The wire schema is governed by [`https://github.com/bsv8/go-bitfs/tree/main/spec/v1/bitfs.cddl`](https://github.com/bsv8/go-bitfs/tree/main/spec/v1/bitfs.cddl); encoding, stable ID, and signing rules are governed by [`https://github.com/bsv8/go-bitfs/tree/main/spec/v1/protocol.md`](https://github.com/bsv8/go-bitfs/tree/main/spec/v1/protocol.md). Buyers, sellers, arbitrators, and their runtimes MUST NOT copy or alter these rules independently.
+This document describes the business rules of BitFS. The wire schema is governed by [`https://github.com/bsv8/BitFSProtocol/tree/main/spec/v1/bitfs.cddl`](https://github.com/bsv8/BitFSProtocol/tree/main/spec/v1/bitfs.cddl); encoding, stable ID, and signing rules are governed by [`https://github.com/bsv8/BitFSProtocol/tree/main/spec/v1/protocol.md`](https://github.com/bsv8/BitFSProtocol/tree/main/spec/v1/protocol.md). Buyers, sellers, arbitrators, and their runtimes MUST NOT copy or alter these rules independently.
 
 ## File Model
 

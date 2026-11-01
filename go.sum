@@ -4,8 +4,8 @@ github.com/bsv8/MasterSeed v1.1.0 h1:ew2FpSdf9cEMpvmAndYEnCd6XwLjiiw9wRxIGjIpwqY
 github.com/bsv8/MasterSeed v1.1.0/go.mod h1:ULMCjerY24hd1aSwb2FXrYrQmjE0xCdbQ1iCbQTIVME=
 github.com/bsv8/MultisigPool/v4 v4.0.0 h1:7r7MjHpo2R/73trH9XYlEg0NIn6nemKzcue3z4TlsZE=
 github.com/bsv8/MultisigPool/v4 v4.0.0/go.mod h1:gFkul5oin8jrYFfg6uTDocYl+6cZQgXYX/KCra0EHeg=
-github.com/bsv8/bitcoin-libp2p v0.3.0 h1:/6iQOvDCrUWEZ0wfpN+kpL4wY9PLDUBjVQTC0GBxA0g=
-github.com/bsv8/bitcoin-libp2p v0.3.0/go.mod h1:L0eZwzy4E975L8aVHDAwfIEI0XGrVdpnBwr/RnpeHco=
+github.com/bsv8/bitcoin-libp2p v0.3.2 h1:4cSGmB2hSNlzY903sRbxTe2w0DuG4UR5BnByhhk1c0s=
+github.com/bsv8/bitcoin-libp2p v0.3.2/go.mod h1:MqJ6OJVnBEPeBHZuZ5pWPGkUMG8QcBaYZAzYPSe4K0w=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fxamacker/cbor/v2 v2.9.2 h1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=

@@ -17,8 +17,8 @@ import (
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
 	"github.com/bsv-blockchain/go-sdk/transaction/template/p2pkh"
-	"github.com/bsv8/go-bitfs/demo/internal/junglebus"
-	"github.com/bsv8/go-bitfs/pool"
+	"github.com/bsv8/BitFSProtocol/demo/internal/junglebus"
+	"github.com/bsv8/BitFSProtocol/pool"
 )
 
 func TestBuildFundingTxUsesSelectedUTXOAndSignsInput(t *testing.T) {

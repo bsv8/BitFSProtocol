@@ -13,7 +13,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	"github.com/fxamacker/cbor/v2"
 )
 

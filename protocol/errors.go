@@ -3,7 +3,7 @@ package protocol
 import (
 	"errors"
 	"fmt"
-	bitfsdebug "github.com/bsv8/go-bitfs/debug"
+	bitfsdebug "github.com/bsv8/BitFSProtocol/debug"
 	"strings"
 )
 
@@ -62,7 +62,7 @@ type Error struct {
 // NewError 构造一个结构化错误；cause 可为 nil。
 func NewError(op string, code ErrorCode, kind uint16, field string, cause error) *Error {
 	result := &Error{Op: op, Code: code, Kind: kind, Field: field, Cause: cause}
-	bitfsdebug.Log("go-bitfs", "protocol.error", func() any {
+	bitfsdebug.Log("BitFSProtocol", "protocol.error", func() any {
 		return map[string]any{"op": op, "code": code, "kind": kind, "field": field, "error": result}
 	})
 	return result

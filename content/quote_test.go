@@ -8,7 +8,7 @@ import (
 	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 func TestSignedFileQuoteRoundTripAndVerification(t *testing.T) {

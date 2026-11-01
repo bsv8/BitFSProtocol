@@ -16,7 +16,7 @@ import (
 // arbitratedPoolV4Fixture is copied from the MultisigPool repository's
 // testdata/arbitrated_pool_v4_fixture.json. Keeping the exact upstream vector
 // in this repository makes the vendored dependency and its byte-level output
-// part of go-bitfs's clean-checkout test surface.
+// part of BitFSProtocol's clean-checkout test surface.
 type arbitratedPoolV4Fixture struct {
 	Protocol                 string    `json:"protocol"`
 	Version                  uint64    `json:"version"`

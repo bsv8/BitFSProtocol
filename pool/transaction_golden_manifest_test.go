@@ -13,8 +13,8 @@ import (
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
 	sighash "github.com/bsv-blockchain/go-sdk/transaction/sighash"
-	"github.com/bsv8/go-bitfs/internal/conformance"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/internal/conformance"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // 本文件把交易层字节（退款模板、合并退款、普通付款、立即关闭、仲裁付款的

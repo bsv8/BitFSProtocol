@@ -66,7 +66,7 @@ DEMO_02_STATE_DIR="$STATE_DIR" \
 
 ## 0201 的真实 UTXO 和网络选择
 
-0201 在 buyer 应用层自己调用 JungleBus，不增加 go-bitfs 内部的 hook 或接口。JungleBus 的地址接口提供交易历史而不是余额/UTXO 快照，因此 demo 会下载相关交易的原始 bytes，按 outpoint 追踪输入和输出，重建地址当前的已确认 UTXO。它会：
+0201 在 buyer 应用层自己调用 JungleBus，不增加 BitFSProtocol 内部的 hook 或接口。JungleBus 的地址接口提供交易历史而不是余额/UTXO 快照，因此 demo 会下载相关交易的原始 bytes，按 outpoint 追踪输入和输出，重建地址当前的已确认 UTXO。它会：
 
 1. 在任何 JungleBus 查询前根据 `BITFS_NETWORK` 推导并显示当前网络的 P2PKH 地址，方便充值；
 2. 根据 `BITFS_NETWORK` 选择地址并查询 JungleBus 地址历史；

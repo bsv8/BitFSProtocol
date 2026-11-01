@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bsv8/go-bitfs/internal/refundlock"
+	"github.com/bsv8/BitFSProtocol/internal/refundlock"
 )
 
 // Facts 是调用方作为显式外部事实传入的观测值：影响协议过期、deadline 与

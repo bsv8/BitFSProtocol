@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 func TestPaymentUpdateRoundTripAndIsolation(t *testing.T) {

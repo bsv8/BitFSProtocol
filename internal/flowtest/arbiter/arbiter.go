@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"context"
 
-	realarbiter "github.com/bsv8/go-bitfs/arbiter"
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	realarbiter "github.com/bsv8/BitFSProtocol/arbiter"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // Workflow 是测试用仲裁方会话：只固定 Signer 与公钥。

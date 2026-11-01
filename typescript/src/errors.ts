@@ -26,6 +26,6 @@ export class WireError extends Error {
   ) {
     super(message)
     this.name = 'WireError'
-    bitfsDebug('go-bitfs', 'protocol.error', () => ({ error: this }))
+    bitfsDebug('BitFSProtocol', 'protocol.error', () => ({ error: this }))
   }
 }

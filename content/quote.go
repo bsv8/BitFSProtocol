@@ -13,8 +13,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/bsv8/BitFSProtocol/protocol"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 var quoteMediaTypePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$`)

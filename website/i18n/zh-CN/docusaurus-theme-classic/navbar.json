@@ -1,10 +1,10 @@
 {
   "title": {
-    "message": "go-bitfs",
+    "message": "BitFSProtocol",
     "description": "The title in the navbar"
   },
   "logo.alt": {
-    "message": "go-bitfs mark",
+    "message": "BitFSProtocol mark",
     "description": "The alt text of navbar logo"
   },
   "item.label.Guides": {

@@ -1,8 +1,8 @@
-# 使用 go-bitfs 角色工作流完成一次文件购买业务
+# 使用 BitFSProtocol 角色工作流完成一次文件购买业务
 
 本文给出一个可直接映射为 Go 代码的端到端业务实现：卖家发布文件报价，买家建立 2-of-3 支付池，先购买 Seed，再按 Seed 顺序购买全部文件块，每块交付后完成一次累计付款，最后双方协商关闭支付池。
 
-示例调用的是本仓库当前公开角色 API。go-bitfs 是**无状态、无基础设施副作用的协议 SDK**：角色 workflow 只持有构造时固定的受约束 Signer（本地软件私钥经 `protocol.NewPrivateKeySigner` 进入），只做协议计算与验证；时间与区块高度由调用方以 `protocol.Facts{Now, BlockHeight}` 显式传入。数据库、事务、锁、内容仓库、节点广播、时间源和高度来源全部由业务应用提供。
+示例调用的是本仓库当前公开角色 API。BitFSProtocol 是**无状态、无基础设施副作用的协议 SDK**：角色 workflow 只持有构造时固定的受约束 Signer（本地软件私钥经 `protocol.NewPrivateKeySigner` 进入），只做协议计算与验证；时间与区块高度由调用方以 `protocol.Facts{Now, BlockHeight}` 显式传入。数据库、事务、锁、内容仓库、节点广播、时间源和高度来源全部由业务应用提供。
 
 ## 1. 业务目标与成功条件
 
@@ -59,9 +59,9 @@ sequenceDiagram
 
 | 能力 | 负责方 | 本例使用的接口 |
 |---|---|---|
-| 报价、内容凭证、定价和签名验证 | go-bitfs | `seller.Workflow`、`buyer.Workflow`、`content` 领域包 |
-| 支付池交易构造、解析、签名合并 | go-bitfs | `pool.MultisigPoolEngine`（纯函数） |
-| 报文编码与严格解析 | go-bitfs | `wire.Encode*` / `wire.ParseAs`，返回不可变 `wire.Artifact` |
+| 报价、内容凭证、定价和签名验证 | BitFSProtocol | `seller.Workflow`、`buyer.Workflow`、`content` 领域包 |
+| 支付池交易构造、解析、签名合并 | BitFSProtocol | `pool.MultisigPoolEngine`（纯函数） |
+| 报文编码与严格解析 | BitFSProtocol | `wire.Encode*` / `wire.ParseAs`，返回不可变 `wire.Artifact` |
 | 私钥托管 | 应用经唯一端口注入 | `protocol.NewPrivateKeySigner(key)` → 角色 workflow 构造参数 |
 | FundingTx 构建和签名 | 应用钱包 | `Wallet.BuildSignedFundingTransaction`（本文伪接口） |
 | 全部本地角色状态持久化 | 应用数据库 | `PurchaseJournal`（本文伪接口），以 `RefundTemplateTxID` 与授权 ID 为键 |
@@ -70,7 +70,7 @@ sequenceDiagram
 | 节点广播与链上对账 | 应用 | `NodeBroadcaster`（本文伪接口） |
 | HTTP、队列、WebSocket | 应用 | 传输 `wire.Artifact.Bytes()` 的 exact bytes |
 
-> go-bitfs 不提供任何 Store、Repository、租约或后端实现。若买卖双方是独立服务，各自持有自己的本地 checkpoint 即可——SDK 从不依赖共享存储。
+> BitFSProtocol 不提供任何 Store、Repository、租约或后端实现。若买卖双方是独立服务，各自持有自己的本地 checkpoint 即可——SDK 从不依赖共享存储。
 
 ### 2.1 应用侧推荐顺序：persist-before-send
 

@@ -3,7 +3,7 @@ package pool
 import (
 	"crypto/sha256"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // PoolOutputIndex 是 FundingTransactionRaw 中资金池输出的协议固定索引。

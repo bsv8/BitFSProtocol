@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
+	"github.com/bsv8/BitFSProtocol/protocol"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/protocol"
 )
 
 // contentTestOpening 是 PoolOpeningEvidence 的测试实现：模拟应用从本地保存的

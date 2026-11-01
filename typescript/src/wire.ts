@@ -24,10 +24,10 @@ export class Artifact {
 
 /** 从完整 exact bytes 严格解析并按自描述 Kind 分派。 */
 export function parse (rawInput: Uint8Array): Artifact {
-  const finish = bitfsDebugStart('go-bitfs', 'wire.parse')
+  const finish = bitfsDebugStart('BitFSProtocol', 'wire.parse')
   try {
     const artifact = parseExact(rawInput)
-    bitfsDebug('go-bitfs', 'wire.accepted', () => ({ kind: artifact.kind, bytes: rawInput.byteLength }))
+    bitfsDebug('BitFSProtocol', 'wire.accepted', () => ({ kind: artifact.kind, bytes: rawInput.byteLength }))
     finish()
     return artifact
   } catch (error) { finish(error); throw error }

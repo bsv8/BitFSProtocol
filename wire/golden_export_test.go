@@ -9,11 +9,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	wire "github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	wire "github.com/bsv8/BitFSProtocol/wire"
 )
 
 // 新实现独立导出器：与 golden_messages_test 相同的确定性 fixture，输出与

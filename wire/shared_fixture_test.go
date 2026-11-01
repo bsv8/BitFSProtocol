@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bsv8/go-bitfs/internal/conformance"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/internal/conformance"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // TestSharedInvalidWireFixtures 保证 Go 与 TypeScript 对同一批畸形输入返回

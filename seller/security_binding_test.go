@@ -9,12 +9,12 @@ import (
 	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/flowtest/arbiter"
-	"github.com/bsv8/go-bitfs/internal/flowtest/buyer"
-	"github.com/bsv8/go-bitfs/protocol"
-	wire "github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/arbiter"
+	"github.com/bsv8/BitFSProtocol/internal/flowtest/buyer"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	wire "github.com/bsv8/BitFSProtocol/wire"
 )
 
 // 本文件锁定两项安全契约：

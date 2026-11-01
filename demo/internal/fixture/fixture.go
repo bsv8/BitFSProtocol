@@ -22,13 +22,13 @@ import (
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	"github.com/bsv-blockchain/go-sdk/script"
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
+	"github.com/bsv8/BitFSProtocol/wire"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
-	"github.com/bsv8/go-bitfs/wire"
 )
 
 // blockHeight 是调用方认可并提供的当前区块高度；SDK 不查询节点，demo 用它

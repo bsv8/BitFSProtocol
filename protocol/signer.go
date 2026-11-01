@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	bitfsdebug "github.com/bsv8/go-bitfs/debug"
+	bitfsdebug "github.com/bsv8/BitFSProtocol/debug"
 	"time"
 )
 
@@ -78,11 +78,11 @@ func (s *boundSigner) PublicKey() PublicKey { return s.publicKey }
 
 func (s *boundSigner) Sign(ctx context.Context, request SigningRequest) (signature []byte, failure error) {
 	started := time.Now()
-	bitfsdebug.Log("go-bitfs", "sign.start", func() any {
+	bitfsdebug.Log("BitFSProtocol", "sign.start", func() any {
 		return map[string]any{"purpose": request.Purpose.String(), "kind": request.WireKind, "publicKey": s.publicKey}
 	})
 	defer func() {
-		bitfsdebug.Log("go-bitfs", "sign.finish", func() any {
+		bitfsdebug.Log("BitFSProtocol", "sign.finish", func() any {
 			return map[string]any{"purpose": request.Purpose.String(), "kind": request.WireKind, "signatureBytes": len(signature), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
 		})
 	}()

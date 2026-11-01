@@ -14,14 +14,14 @@ import (
 	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
-	"github.com/bsv8/go-bitfs/arbiter"
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/internal/conformance"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbiter"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/internal/conformance"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 type roleFixtureView struct {
@@ -307,7 +307,7 @@ func TestPureFunctionsAreRepeatable(t *testing.T) {
 		QuoteExpiresAtUnixSeconds: 2000000000,
 		RecommendedFilename:       "file.bin",
 		MaxBlocksPerBatch:         64,
-		MediaType: "application/octet-stream",
+		MediaType:                 "application/octet-stream",
 	}
 	arbiters, err := content.EncodeSupportedArbiterPublicKeys([][]byte{mustPub(t, "33")})
 	if err != nil {

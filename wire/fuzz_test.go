@@ -3,9 +3,9 @@ package wire_test
 import (
 	"testing"
 
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/protocol"
-	wire "github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	wire "github.com/bsv8/BitFSProtocol/wire"
 )
 
 // FuzzParse 保证 wire 主解析器对任意输入不 panic、不无限分配：畸形、截断、

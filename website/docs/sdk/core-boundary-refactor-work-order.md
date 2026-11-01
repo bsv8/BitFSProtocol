@@ -26,7 +26,7 @@ binds the payload bundle through `content_payloads_id`. The
 
 ## Product definition
 
-`go-bitfs` is a **stateless, infrastructure-side-effect-free** executable BitFS
+`BitFSProtocol` is a **stateless, infrastructure-side-effect-free** executable BitFS
 protocol specification and role SDK for Buyer, Seller, and Arbiter
 implementations. Given explicit protocol inputs, explicit prior state, and one
 explicit `protocol.Facts{Now, BlockHeight}` value per call, it strictly decides

@@ -17,11 +17,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/demo/internal/poolopening"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/demo/internal/poolopening"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 // nowUTC 返回当前 UTC 时间；demo 应用允许读取系统时钟并把它作为显式事实

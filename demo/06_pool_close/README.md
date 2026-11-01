@@ -18,9 +18,9 @@ package main
 import (
 	"context"
 
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
 )
 
 func negotiateClose(

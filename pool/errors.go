@@ -10,7 +10,7 @@ package pool
 import (
 	"crypto/sha256"
 
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // invalid 构造本包统一的 invalid_evidence 结构化错误；message 只携带安全的

@@ -21,7 +21,7 @@ kind-1-file-quote = [
 file_quote_terms_id = SHA-256(file_quote_terms_cbor)
 ```
 
-规范 CDDL 真值位于 [`spec/v1/wire-messages.cddl`](https://github.com/bsv8/go-bitfs/blob/main/spec/v1/wire-messages.cddl)。
+规范 CDDL 真值位于 [`spec/v1/wire-messages.cddl`](https://github.com/bsv8/BitFSProtocol/blob/main/spec/v1/wire-messages.cddl)。
 
 ## `FileQuoteTerms`
 

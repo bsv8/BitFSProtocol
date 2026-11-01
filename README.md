@@ -1,8 +1,15 @@
-# go-bitfs / TypeScript BitFS SDK
+# BitFSProtocol
 
 本仓库现在同时维护 Go 与 TypeScript 两种 BitFS Wire Protocol v1 实现。两端使用
 strict deterministic CBOR，保留离线验签所需的 exact signed bytes，并共同消费
 `fixtures/manifest.json` 指向的 wire、交易、CDDL 与 libp2p transport 真值。
+
+包名与职责：
+
+- 仓库：`github.com/bsv8/BitFSProtocol`。
+- Go module：`github.com/bsv8/BitFSProtocol`，按 `/buyer`、`/seller` 等包导入。
+- npm 包：`bitfs-protocol`，由 `typescript/` 构建，提供相同 wire v1 协议能力。
+- 本项目是协议规范与 SDK，不是运行中的文件买卖服务；钱包、任务调度、数据库与服务运维由消费方负责。
 
 目录与字段含义：
 
@@ -39,7 +46,7 @@ The current CDDL is under `spec/v1/`; retired iterations are archived under `spe
 ## 调试出口
 
 Go 使用 `debug.SetSink(func(debug.Event) { ... })`（导入
-`github.com/bsv8/go-bitfs/debug`），`debug.SetSink(nil)` 关闭；TS 使用
+`github.com/bsv8/BitFSProtocol/debug`），`debug.SetSink(nil)` 关闭；TS 使用
 `setBitfsDebugSink`，见 [TS 使用说明](typescript/README.md#调试输出)。
 默认关闭，SDK 不猜 dev 环境、不写日志文件。事件包含运行编号、序号、时间、协议
 步骤/签名/解析与错误。宿主 sink 须并发安全、快速返回、不回调 SDK；sink panic/抛错

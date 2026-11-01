@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/bsv8/go-bitfs/transport"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/transport"
+	"github.com/bsv8/BitFSProtocol/wire"
 )
 
 type fixtureIndex struct {

@@ -131,7 +131,7 @@ const TIMESTAMP_THRESHOLD = 500_000_000
  * exact Kind 1 与最终规范化 terms（展示实际签署值）。
  */
 export async function createSellerQuote (facts: Readonly<PureFunctionFacts>, signer: Signer, terms: Readonly<FileQuoteTerms>): Promise<{ outbound: Artifact, terms: FileQuoteTerms }> {
-  bitfsDebug('go-bitfs', 'seller.quote.create', () => ({ facts, seedHash: terms.seedHash, fileSizeBytes: terms.fileSizeBytes, seedPriceSatoshis: terms.seedPriceSatoshis, fullBlockPriceSatoshis: terms.fullBlockPriceSatoshis }))
+  bitfsDebug('BitFSProtocol', 'seller.quote.create', () => ({ facts, seedHash: terms.seedHash, fileSizeBytes: terms.fileSizeBytes, seedPriceSatoshis: terms.seedPriceSatoshis, fullBlockPriceSatoshis: terms.fullBlockPriceSatoshis }))
   const bound = bindSigner(signer, 'seller_signer')
   const now = requireNow(facts)
   const finalTerms: FileQuoteTerms = { ...terms, supportedArbiterPublicKeys: terms.supportedArbiterPublicKeys.map(copyBytes), seedHash: copyBytes(terms.seedHash), buyerPublicKey: copyBytes(terms.buyerPublicKey), recommendedFilename: sanitizeRecommendedFilename(terms.recommendedFilename) }
@@ -147,7 +147,7 @@ export async function createSellerQuote (facts: Readonly<PureFunctionFacts>, sig
  * 才调用 Signer。金额从退款模板推导，不接收调用方金额。
  */
 export async function prepareSellerPresign (rawKind2: Uint8Array, signer: Signer): Promise<{ outbound: Artifact, opening: SellerOpeningEvidence }> {
-  bitfsDebug('go-bitfs', 'seller.opening.presign', () => ({ requestBytes: rawKind2.byteLength }))
+  bitfsDebug('BitFSProtocol', 'seller.opening.presign', () => ({ requestBytes: rawKind2.byteLength }))
   const bound = bindSigner(signer, 'seller_signer')
   const request = decodeKind2Request(rawKind2)
   if (!equal(bound.publicKey(), request.sellerPublicKey)) throw new WireError('unauthorized', 2, 'seller_public_key', '开池请求未绑定当前卖方身份')
@@ -327,7 +327,7 @@ export async function inspectBuyerPool (pool: BuyerPoolEvidence): Promise<{ paym
  * 与本证据包。
  */
 export async function prepareSellerDelivery (facts: Readonly<PureFunctionFacts>, input: DeliveryInput, signer: Signer): Promise<{ outbound: Artifact, evidence: SellerDeliveryEvidence }> {
-  bitfsDebug('go-bitfs', 'seller.delivery.prepare', () => ({ facts }))
+  bitfsDebug('BitFSProtocol', 'seller.delivery.prepare', () => ({ facts }))
   const bound = bindSigner(signer, 'seller_signer')
   const signedQuote = decodeKind1Quote(input.quoteRaw)
   const checkpoint = await sellerPoolCheckpoint(input.pool)
@@ -351,7 +351,7 @@ export async function prepareSellerDelivery (facts: Readonly<PureFunctionFacts>,
  * +1、金额不倒退、容量足够，验过买方签名后补签并合并完整交易。
  */
 export async function completeSellerPayment (facts: Readonly<PureFunctionFacts>, input: CompletePaymentInput, signer: Signer): Promise<{ rawTransaction: Uint8Array, pool: SellerPoolEvidence }> {
-  bitfsDebug('go-bitfs', 'seller.payment.complete', () => ({ facts }))
+  bitfsDebug('BitFSProtocol', 'seller.payment.complete', () => ({ facts }))
   const bound = bindSigner(signer, 'seller_signer')
   const checkpoint = await sellerPoolCheckpoint(input.pool)
   const opening = checkpoint.opening
@@ -385,7 +385,7 @@ export async function completeSellerPayment (facts: Readonly<PureFunctionFacts>,
  * 返回完整交易原文，是否广播由应用决定。
  */
 export async function completeSellerClose (facts: Readonly<PureFunctionFacts>, input: CompleteCloseInput, signer: Signer): Promise<Uint8Array> {
-  bitfsDebug('go-bitfs', 'seller.close.complete', () => ({ facts }))
+  bitfsDebug('BitFSProtocol', 'seller.close.complete', () => ({ facts }))
   const checkpoint = await sellerPoolCheckpoint(input.pool)
   return await completeSellerCloseForOpening(facts, checkpoint, input.unsignedRaw, input.buyerSignature, signer)
 }
@@ -501,7 +501,7 @@ export function acceptBuyerQuote (facts: Readonly<PureFunctionFacts>, rawKind1: 
  * 纯交易构造，不含时间/高度判断，因此不接收 facts。
  */
 export async function prepareBuyerOpening (input: PrepareOpeningInput, signer: Signer): Promise<{ outbound: Artifact, opening: BuyerOpeningEvidence }> {
-  bitfsDebug('go-bitfs', 'buyer.opening.prepare', () => ({ role: 'buyer' }))
+  bitfsDebug('BitFSProtocol', 'buyer.opening.prepare', () => ({ role: 'buyer' }))
   const bound = bindSigner(signer, 'buyer_signer')
   const quote = verifyQuoteEvidence(decodeKind1Quote(input.quoteRaw))
   if (!equal(quote.terms.buyerPublicKey, bound.publicKey())) throw new WireError('unauthorized', 2, 'buyer_public_key', 'Signer 不是报价命名的买方')
@@ -530,7 +530,7 @@ export async function prepareBuyerOpening (input: PrepareOpeningInput, signer: S
  * 开池证据包与初始池证据包。
  */
 export async function completeBuyerOpening (opening: BuyerOpeningEvidence, rawKind3: Uint8Array): Promise<{ opening: BuyerOpeningEvidence, pool: BuyerPoolEvidence }> {
-  bitfsDebug('go-bitfs', 'buyer.opening.complete', () => ({ responseBytes: rawKind3.byteLength }))
+  bitfsDebug('BitFSProtocol', 'buyer.opening.complete', () => ({ responseBytes: rawKind3.byteLength }))
   const request = decodeKind2Request(opening.rawKind2)
   const response = decodeKind3Response(rawKind3)
   const engine = new MultisigPoolEngine({ buyerPublicKey: request.buyerPublicKey, sellerPublicKey: request.sellerPublicKey, arbiterPublicKey: request.arbiterPublicKey })
@@ -576,7 +576,7 @@ export async function prepareBuyerFundingDelivery (pool: BuyerPoolEvidence): Pro
  * 返回待发送 Artifact 与必须先持久化的普通授权证据包。
  */
 export async function prepareBuyerContentRequest (facts: Readonly<PureFunctionFacts>, input: RequestContentInput, signer: Signer): Promise<{ outbound: Artifact, authorization: BuyerAuthorizationEvidence }> {
-  bitfsDebug('go-bitfs', 'buyer.content.request', () => ({ facts }))
+  bitfsDebug('BitFSProtocol', 'buyer.content.request', () => ({ facts }))
   const bound = bindSigner(signer, 'buyer_signer')
   const now = requireNow(facts)
   const signedQuote = decodeKind1Quote(input.quoteRaw)
@@ -630,7 +630,7 @@ export async function prepareBuyerContentRequest (facts: Readonly<PureFunctionFa
  * 先验 payload 与 seed 归属，再签 Kind 7；不产生“已付款”状态。
  */
 export async function verifyBuyerDelivery (facts: Readonly<PureFunctionFacts>, input: VerifyDeliveryInput, signer: Signer): Promise<{ payloads: Uint8Array[], outbound: Artifact }> {
-  bitfsDebug('go-bitfs', 'buyer.delivery.verify', () => ({ facts }))
+  bitfsDebug('BitFSProtocol', 'buyer.delivery.verify', () => ({ facts }))
   const bound = bindSigner(signer, 'buyer_signer')
   const now = requireNow(facts)
   const signedQuote = decodeKind1Quote(input.authorization.rawKind1)
@@ -712,7 +712,7 @@ export async function verifyBuyerCompletedClose (input: VerifyCompletedCloseInpu
 
 /** 严格解析 Kind 13、核对费用池关联 ID 并验证完整关闭交易。 */
 export async function verifyBuyerCompletedCloseArtifact (input: VerifyCompletedCloseArtifactInput): Promise<Uint8Array> {
-  bitfsDebug('go-bitfs', 'buyer.close.verify')
+  bitfsDebug('BitFSProtocol', 'buyer.close.verify')
   const response = decodePoolCloseResponse(input.responseRaw)
   const checkpoint = await buyerPoolCheckpoint(input.pool)
   const details = await deriveOpeningDetails(checkpoint.opening)
@@ -1413,11 +1413,11 @@ class BoundSigner implements Signer {
   }
   publicKey (): Uint8Array { return copyBytes(this.#publicKey) }
   async sign (request: Parameters<Signer['sign']>[0], signal?: AbortSignal): Promise<Uint8Array> {
-    const finish = bitfsDebugStart('go-bitfs', 'sign.bound')
-    bitfsDebug('go-bitfs', 'sign.request', () => ({ purpose: request.purpose, kind: request.wireKind, publicKey: this.#publicKey }))
+    const finish = bitfsDebugStart('BitFSProtocol', 'sign.bound')
+    bitfsDebug('BitFSProtocol', 'sign.request', () => ({ purpose: request.purpose, kind: request.wireKind, publicKey: this.#publicKey }))
     try {
       const result = await this.#delegate.sign(request, signal)
-      bitfsDebug('go-bitfs', 'sign.returned', () => ({ purpose: request.purpose, kind: request.wireKind, signatureBytes: result.byteLength }))
+      bitfsDebug('BitFSProtocol', 'sign.returned', () => ({ purpose: request.purpose, kind: request.wireKind, signatureBytes: result.byteLength }))
       finish()
       return result
     } catch (error) { finish(error); throw error }

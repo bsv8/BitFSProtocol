@@ -4,7 +4,7 @@ package seller
 // 纯函数实现驱动同一套内部证据逻辑。它不是公开 API：公开面只有 api.go 中的
 // 包级纯函数与普通证据包。
 
-import "github.com/bsv8/go-bitfs/protocol"
+import "github.com/bsv8/BitFSProtocol/protocol"
 
 // Workflow 是测试内可见的内部工作区别名（非公开 API）。
 type Workflow = workflow

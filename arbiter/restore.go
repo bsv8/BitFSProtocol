@@ -3,8 +3,8 @@ package arbiter
 import (
 	"bytes"
 
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/protocol"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/protocol"
 )
 
 // restorePreparedArbitration 从应用持久化的 exact 托管证据（exact Kind 8

@@ -23,8 +23,8 @@ github.com/bsv8/MultisigPool/v4/pkg
 github.com/bsv8/MultisigPool/v4/pkg/arbitrated_pool
 github.com/bsv8/MultisigPool/v4/pkg/libs
 github.com/bsv8/MultisigPool/v4/pkg/two_party_pool
-# github.com/bsv8/bitcoin-libp2p v0.3.0
-## explicit; go 1.25.7
+# github.com/bsv8/bitcoin-libp2p v0.3.2
+## explicit; go 1.26.0
 github.com/bsv8/bitcoin-libp2p/streamio
 # github.com/fxamacker/cbor/v2 v2.9.2
 ## explicit; go 1.20

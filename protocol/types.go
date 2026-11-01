@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bsv8/go-bitfs/internal/refundlock"
+	"github.com/bsv8/BitFSProtocol/internal/refundlock"
 )
 
 // 本文件定义仓库唯一的共享强类型值：哈希、摘要、压缩公钥、聪数、区块高度、

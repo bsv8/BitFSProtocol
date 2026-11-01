@@ -10,12 +10,12 @@ import (
 	"testing"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
-	"github.com/bsv8/go-bitfs/arbitration"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/docs/cddltool"
-	"github.com/bsv8/go-bitfs/internal/conformance"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/wire"
+	"github.com/bsv8/BitFSProtocol/arbitration"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/docs/cddltool"
+	"github.com/bsv8/BitFSProtocol/internal/conformance"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/wire"
 	"github.com/fxamacker/cbor/v2"
 )
 

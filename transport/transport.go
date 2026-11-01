@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bsv8/BitFSProtocol/wire"
 	"github.com/bsv8/bitcoin-libp2p/streamio"
-	"github.com/bsv8/go-bitfs/wire"
 )
 
 // ProtocolID 是 Go/TypeScript 节点注册和拨号时共同使用的 libp2p stream ID。

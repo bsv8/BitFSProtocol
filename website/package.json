@@ -1,8 +1,8 @@
 {
-  "name": "go-bitfs-docs",
+  "name": "bitfs-protocol-docs",
   "version": "1.0.0",
   "private": true,
-  "description": "Source-driven multilingual documentation for go-bitfs",
+  "description": "Source-driven multilingual documentation for BitFSProtocol",
   "scripts": {
     "clean": "node scripts/clean.mjs",
     "generate:api": "node scripts/generate-api.mjs",

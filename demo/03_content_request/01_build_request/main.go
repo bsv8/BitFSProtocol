@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/bsv8/go-bitfs/demo/internal/demoenv"
-	"github.com/bsv8/go-bitfs/demo/internal/fixture"
-	"github.com/bsv8/go-bitfs/pool"
+	"github.com/bsv8/BitFSProtocol/demo/internal/demoenv"
+	"github.com/bsv8/BitFSProtocol/demo/internal/fixture"
+	"github.com/bsv8/BitFSProtocol/pool"
 )
 
 func main() {

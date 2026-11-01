@@ -1,7 +1,7 @@
 // Package poolopening 提供细粒度 002 开池 demo 共用的应用组装、交易辅助逻辑
 // 和演示私有本地 checkpoint。
 //
-// go-bitfs SDK 是无状态纯函数库：它不加载、不保存、不广播任何状态。本包扮演
+// BitFSProtocol SDK 是无状态纯函数库：它不加载、不保存、不广播任何状态。本包扮演
 // “调用方应用”，自己持有买卖双方受约束 Signer 与普通证据包，并用自己的 JSON
 // checkpoint 按 RefundTemplateTxID 保存跨进程需要的 exact 证据：
 //
@@ -39,14 +39,14 @@ import (
 	tx "github.com/bsv-blockchain/go-sdk/transaction"
 	sighash "github.com/bsv-blockchain/go-sdk/transaction/sighash"
 	"github.com/bsv-blockchain/go-sdk/transaction/template/p2pkh"
+	"github.com/bsv8/BitFSProtocol/buyer"
+	"github.com/bsv8/BitFSProtocol/content"
+	"github.com/bsv8/BitFSProtocol/demo/internal/junglebus"
+	"github.com/bsv8/BitFSProtocol/pool"
+	"github.com/bsv8/BitFSProtocol/protocol"
+	"github.com/bsv8/BitFSProtocol/seller"
+	"github.com/bsv8/BitFSProtocol/wire"
 	masterseed "github.com/bsv8/MasterSeed"
-	"github.com/bsv8/go-bitfs/buyer"
-	"github.com/bsv8/go-bitfs/content"
-	"github.com/bsv8/go-bitfs/demo/internal/junglebus"
-	"github.com/bsv8/go-bitfs/pool"
-	"github.com/bsv8/go-bitfs/protocol"
-	"github.com/bsv8/go-bitfs/seller"
-	"github.com/bsv8/go-bitfs/wire"
 )
 
 const defaultStateDir = "demo/.state"
@@ -264,7 +264,7 @@ type FundingPreparation struct {
 }
 
 // PrepareFunding 访问 JungleBus，选择真实可用 UTXO，并构造一笔规范、已签名
-// 的资金交易。数据提供方调用被限制在 demo 层，go-bitfs SDK 本身不依赖
+// 的资金交易。数据提供方调用被限制在 demo 层，BitFSProtocol SDK 本身不依赖
 // JungleBus 客户端。
 func (session *BuyerSession) PrepareFunding(ctx context.Context) (*FundingPreparation, error) {
 	if session == nil || session.buyerKey == nil {
