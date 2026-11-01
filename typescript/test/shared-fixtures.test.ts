@@ -871,7 +871,7 @@ describe('角色纯函数跨语言真值（fixtures/role-v1.json）', () => {
     expect(generatedNonce.every(byte => byte === 0)).toBe(false)
     expect(() => newRetrievalNonce(new Uint8Array(32))).toThrowError(expect.objectContaining({ code: 'invalid_evidence' }))
     expect(toHex(newRetrievalNonce(hex('a7'.repeat(32))))).toBe('a7'.repeat(32))
-  })
+  }, 30_000) // 完整 Kind 1–13/交易含大量真实签名验签；只限定完成期限，不改变字节断言。
 
   it('计价向量与 Go 的期望分类、价格和错误码一致', async () => {
     for (const vector of roleFixture.price_vectors) {
