@@ -3,7 +3,9 @@ package wire
 import (
 	"github.com/bsv8/go-bitfs/arbitration"
 	"github.com/bsv8/go-bitfs/content"
+	bitfsdebug "github.com/bsv8/go-bitfs/debug"
 	"github.com/bsv8/go-bitfs/protocol"
+	"time"
 )
 
 // Artifact 是已通过严格解析的不可变 exact bytes：它证明 complete wire 的规范
@@ -124,7 +126,13 @@ func decodeArtifact(artifact Artifact) error {
 // Parse 从 exact bytes 解析一个 Artifact：外层头自读 version/kind，显式 switch
 // 分派到对应严格 decoder。未知版本/Kind 返回 unsupported 错误并保留原 bytes
 // 供调用方升级或审计。
-func Parse(raw []byte) (Artifact, error) {
+func Parse(raw []byte) (result Artifact, failure error) {
+	started := time.Now()
+	defer func() {
+		bitfsdebug.Log("go-bitfs", "wire.parse", func() any {
+			return map[string]any{"kind": result.Kind(), "bytes": len(raw), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
+		})
+	}()
 	const op = "wire.Parse"
 	if len(raw) == 0 {
 		return Artifact{}, protocol.Errorf(op, protocol.CodeMalformedWire, 0, "wire", "empty wire message")
@@ -145,7 +153,13 @@ func Parse(raw []byte) (Artifact, error) {
 
 // ParseAs 在 Parse 的基础上额外验证传输路由声明的 Kind 与报文自描述 Kind 一致；
 // 路由声明可以用于分发，但不能成为唯一 Kind 真值。
-func ParseAs(expected Kind, raw []byte) (Artifact, error) {
+func ParseAs(expected Kind, raw []byte) (result Artifact, failure error) {
+	started := time.Now()
+	defer func() {
+		bitfsdebug.Log("go-bitfs", "wire.parse-as", func() any {
+			return map[string]any{"expectedKind": expected, "kind": result.Kind(), "bytes": len(raw), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
+		})
+	}()
 	const op = "wire.ParseAs"
 	if len(raw) == 0 {
 		return Artifact{}, protocol.Errorf(op, protocol.CodeMalformedWire, uint16(expected), "wire", "empty wire message")

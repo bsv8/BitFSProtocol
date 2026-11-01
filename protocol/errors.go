@@ -3,6 +3,7 @@ package protocol
 import (
 	"errors"
 	"fmt"
+	bitfsdebug "github.com/bsv8/go-bitfs/debug"
 	"strings"
 )
 
@@ -60,12 +61,16 @@ type Error struct {
 
 // NewError 构造一个结构化错误；cause 可为 nil。
 func NewError(op string, code ErrorCode, kind uint16, field string, cause error) *Error {
-	return &Error{Op: op, Code: code, Kind: kind, Field: field, Cause: cause}
+	result := &Error{Op: op, Code: code, Kind: kind, Field: field, Cause: cause}
+	bitfsdebug.Log("go-bitfs", "protocol.error", func() any {
+		return map[string]any{"op": op, "code": code, "kind": kind, "field": field, "error": result}
+	})
+	return result
 }
 
 // Errorf 是无底层 cause 的便捷构造器。
 func Errorf(op string, code ErrorCode, kind uint16, field, format string, args ...any) *Error {
-	return &Error{Op: op, Code: code, Kind: kind, Field: field, Cause: fmt.Errorf(format, args...)}
+	return NewError(op, code, kind, field, fmt.Errorf(format, args...))
 }
 
 // Wrap 把底层 err 分类包装为 *Error；err 为 nil 时返回 nil，便于直接 return。
@@ -73,7 +78,7 @@ func Wrap(err error, op string, code ErrorCode, kind uint16, field string) error
 	if err == nil {
 		return nil
 	}
-	return &Error{Op: op, Code: code, Kind: kind, Field: field, Cause: err}
+	return NewError(op, code, kind, field, err)
 }
 
 // WrapClassified 是"保分类"包装：错误链上已有稳定分类（CodeOf 命中）时原样

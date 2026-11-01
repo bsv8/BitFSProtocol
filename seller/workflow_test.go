@@ -767,7 +767,7 @@ func mergedSignedPayment(vt *pool.VerifiedSignedTransaction) *pool.SignedPayment
 	return &pool.SignedPayment{State: *vt.State(), RawTx: vt.RawTx()}
 }
 
-func TestCompleteCloseGuardsFinalSequenceExpiryAndRoles(t *testing.T) {
+func TestCompleteCloseGuardsFinalSequenceAndRolesAfterRefundMaturity(t *testing.T) {
 	f := newSellerFixture(t)
 	p := f.openDefaultPool(t)
 	purchase := f.purchaseSeed(t, p, testBaseTime)
@@ -782,7 +782,7 @@ func TestCompleteCloseGuardsFinalSequenceExpiryAndRoles(t *testing.T) {
 		t.Fatalf("non-final close candidate was accepted: %v", err)
 	}
 
-	// 退款已到期后不能再补签关闭。
+	// 退款成熟不禁止双方合作关闭，但非 final 结构和错误角色仍拒绝。
 	closePrep, err := f.Buyer.PrepareClose(ctx, testFacts(testBaseTime), buyer.PrepareCloseCommand{
 		Pool: p.buyerPool, Base: latest, TargetSellerAmountSatoshis: protocol.Satoshis(target),
 	})
@@ -808,8 +808,8 @@ func TestCompleteCloseGuardsFinalSequenceExpiryAndRoles(t *testing.T) {
 	expiredFacts := protocol.Facts{Now: time.Unix(int64(f.Expiry), 0), BlockHeight: testBlockHeight}
 	if _, err := f.Seller.CompleteClose(ctx, expiredFacts, CloseCommand{
 		Pool: p.sellerPool, Unsigned: closePrep.Unsigned, BuyerSignature: closePrep.BuyerSignature,
-	}); !protocol.IsCode(err, protocol.CodeExpired) {
-		t.Fatalf("close completed after refund expiry: %v", err)
+	}); err != nil {
+		t.Fatalf("cooperative close rejected after refund maturity: %v", err)
 	}
 
 	// 其他卖方 signer 不能补签本池关闭。

@@ -1,3 +1,4 @@
+import { bitfsDebug, bitfsDebugStart } from './debug.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import { decodeCanonical, type CBORValue } from './cbor.js'
@@ -23,6 +24,16 @@ export class Artifact {
 
 /** 从完整 exact bytes 严格解析并按自描述 Kind 分派。 */
 export function parse (rawInput: Uint8Array): Artifact {
+  const finish = bitfsDebugStart('go-bitfs', 'wire.parse')
+  try {
+    const artifact = parseExact(rawInput)
+    bitfsDebug('go-bitfs', 'wire.accepted', () => ({ kind: artifact.kind, bytes: rawInput.byteLength }))
+    finish()
+    return artifact
+  } catch (error) { finish(error); throw error }
+}
+
+function parseExact (rawInput: Uint8Array): Artifact {
   const raw = new Uint8Array(rawInput)
   if (raw.byteLength === 0 || raw.byteLength > MAX_WIRE_FRAME_BYTES) malformed(0, 'wire', '报文为空或超过协议上限')
   const outer = array(decodeCanonical(raw), 0, 'wire')

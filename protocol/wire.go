@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	bitfsdebug "github.com/bsv8/go-bitfs/debug"
 	"math/big"
+	"time"
 
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	"github.com/fxamacker/cbor/v2"
@@ -68,7 +70,14 @@ func WireSignatureDigest(wireVersion, wireKind uint64, documentCBOR []byte) (Dig
 // 操作；签名返回后 SDK 用 Signer 固定公钥立即自验（DER、low-S、验签），
 // 失败即拒绝。ctx 只用于取消远程签名；私钥/托管细节绝不进入 CBOR、报文、
 // 日志或持久化结构。
-func SignWireDocument(ctx context.Context, signer Signer, wireVersion, wireKind uint64, documentCBOR []byte) ([]byte, error) {
+func SignWireDocument(ctx context.Context, signer Signer, wireVersion, wireKind uint64, documentCBOR []byte) (result []byte, failure error) {
+	started := time.Now()
+	bitfsdebug.Log("go-bitfs", "sign.wire.start", func() any { return map[string]any{"kind": wireKind, "documentBytes": len(documentCBOR)} })
+	defer func() {
+		bitfsdebug.Log("go-bitfs", "sign.wire.finish", func() any {
+			return map[string]any{"kind": wireKind, "signatureBytes": len(result), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
+		})
+	}()
 	if ctx == nil {
 		return nil, fmt.Errorf("%w: protocol.SignWireDocument requires a non-nil context", ErrNilInput)
 	}

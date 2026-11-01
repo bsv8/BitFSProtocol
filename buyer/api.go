@@ -14,6 +14,7 @@ import (
 
 	"github.com/bsv8/go-bitfs/arbitration"
 	"github.com/bsv8/go-bitfs/content"
+	bitfsdebug "github.com/bsv8/go-bitfs/debug"
 	"github.com/bsv8/go-bitfs/pool"
 	"github.com/bsv8/go-bitfs/protocol"
 	"github.com/bsv8/go-bitfs/wire"
@@ -182,6 +183,7 @@ type ArbitratedContentResult struct {
 // 必须自行比较返回 Terms().BuyerPublicKey 与本地身份，再决定是否购买。
 // 纯验证路径不签名，因此不接收 context。
 func AcceptQuote(facts protocol.Facts, rawKind1 []byte) (*content.VerifiedQuote, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.quote.accept", func() any { return map[string]any{"facts": facts, "bytes": len(rawKind1)} })
 	artifact, err := wire.ParseAs(wire.FileQuote, rawKind1)
 	if err != nil {
 		return nil, err
@@ -198,6 +200,9 @@ func AcceptQuote(facts protocol.Facts, rawKind1 []byte) (*content.VerifiedQuote,
 // 受支持仲裁方，再进入交易构造；本操作不含任何时间/高度判断，因此不接收
 // Facts；资金交易原文只存在于证据包，SDK 不持久化。
 func PrepareOpening(ctx context.Context, input PrepareOpeningInput, signer protocol.Signer) (wire.Artifact, BuyerOpeningEvidence, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.opening.prepare", func() any {
+		return map[string]any{"expiry": input.ExpiryLockTime, "feeRate": input.MinerFeeRateSatoshisPerKilobyte, "fundingBytes": len(input.FundingTransactionRaw)}
+	})
 	const op = "buyer.PrepareOpening"
 	workflow, err := newWorkflow(signer)
 	if err != nil {
@@ -230,6 +235,7 @@ func PrepareOpening(ctx context.Context, input PrepareOpeningInput, signer proto
 // 错配，验卖方预签，产出完整开池证据包与初始池证据包。纯验证路径不签名，
 // 因此不接收 context。
 func CompleteOpening(opening BuyerOpeningEvidence, rawKind3 []byte) (BuyerOpeningEvidence, BuyerPoolEvidence, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.opening.complete", func() any { return map[string]any{"responseBytes": len(rawKind3)} })
 	checkpoint, err := restoreOpeningCheckpoint(opening.RawKind2, opening.FundingTransactionRaw)
 	if err != nil {
 		return BuyerOpeningEvidence{}, BuyerPoolEvidence{}, err
@@ -320,6 +326,7 @@ func PrepareContentRequest(ctx context.Context, facts protocol.Facts, input Requ
 // 先验 payload 与 seed 归属，再签 Kind 7；不产生“已付款”状态。返回按授权
 // 顺序的已验证 payload 批次与待发送 exact Kind 7。
 func VerifyDelivery(ctx context.Context, facts protocol.Facts, input VerifyDeliveryInput, signer protocol.Signer) ([][]byte, wire.Artifact, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.delivery.verify", func() any { return map[string]any{"facts": facts, "deliveryBytes": len(input.DeliveryRaw)} })
 	workflow, err := newWorkflow(signer)
 	if err != nil {
 		return nil, wire.Artifact{}, err
@@ -353,6 +360,9 @@ func VerifyDelivery(ctx context.Context, facts protocol.Facts, input VerifyDeliv
 // 买方 detached 签名。SDK 不声称基准是业务最新，也不判断目标金额是否符合订单
 // 或账本；不广播。返回未签名 candidate 原文与买方签名。
 func PrepareClose(ctx context.Context, facts protocol.Facts, input PrepareCloseInput, signer protocol.Signer) ([]byte, []byte, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.close.prepare", func() any {
+		return map[string]any{"facts": facts, "sellerAmountSatoshis": input.TargetSellerAmountSatoshis}
+	})
 	unsignedRaw, buyerSignature, _, err := prepareCloseArtifactData(ctx, facts, input, signer)
 	return unsignedRaw, buyerSignature, err
 }
@@ -431,6 +441,7 @@ func verifyCompletedCloseFromCheckpoint(closeRaw []byte, checkpoint *poolCheckpo
 // VerifyCompletedCloseArtifact 严格解析 Kind 13、复核响应池 ID，再验收卖方完整
 // 关闭交易。它不声称交易已广播或已确认。
 func VerifyCompletedCloseArtifact(input VerifyCompletedCloseArtifactInput) (*pool.VerifiedSignedTransaction, error) {
+	bitfsdebug.Log("go-bitfs", "buyer.close.verify", nil)
 	artifact, err := wire.ParseAs(wire.PoolCloseResponse, input.ResponseRaw)
 	if err != nil {
 		return nil, err

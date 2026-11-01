@@ -1,3 +1,5 @@
+import { bitfsDebug } from './debug.js'
+
 /** 应用可稳定分支的错误分类；不要匹配英文错误文本。 */
 export type ErrorCode =
   | 'malformed_wire'
@@ -24,5 +26,6 @@ export class WireError extends Error {
   ) {
     super(message)
     this.name = 'WireError'
+    bitfsDebug('go-bitfs', 'protocol.error', () => ({ error: this }))
   }
 }

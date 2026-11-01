@@ -876,11 +876,13 @@ func TestCloseLifecycleVerifiesFinalSettlement(t *testing.T) {
 	_, err = f.Buyer.BuildMaturedRefund(protocol.Facts{Now: time.Unix(int64(f.Expiry)-1, 0), BlockHeight: testBlockHeight}, p.buyerPool)
 	requireCode(t, err, protocol.CodeNotMatured)
 
-	// 退款已到期时不能再准备关闭。
+	// 退款成熟不禁止双方合作 final 关闭；购买和仲裁的截止门禁不变。
 	_, err = f.Buyer.PrepareClose(ctx, protocol.Facts{Now: time.Unix(int64(f.Expiry), 0), BlockHeight: testBlockHeight}, PrepareCloseCommand{
 		Pool: p.buyerPool, Base: latest, TargetSellerAmountSatoshis: protocol.Satoshis(target),
 	})
-	requireCode(t, err, protocol.CodeExpired)
+	if err != nil {
+		t.Fatalf("cooperative close after refund maturity: %v", err)
+	}
 
 	// 正常关闭链路：买方预备 → 卖方补签合并 → 买方验证最终交易。
 	closePrep, err := f.Buyer.PrepareClose(ctx, testFacts(testBaseTime), PrepareCloseCommand{

@@ -1,3 +1,4 @@
+import { bitfsDebug, bitfsDebugStart } from './debug.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import { decodeCanonical, encodeCanonical, type CBORValue } from './cbor.js'
@@ -130,6 +131,7 @@ const TIMESTAMP_THRESHOLD = 500_000_000
  * exact Kind 1 与最终规范化 terms（展示实际签署值）。
  */
 export async function createSellerQuote (facts: Readonly<PureFunctionFacts>, signer: Signer, terms: Readonly<FileQuoteTerms>): Promise<{ outbound: Artifact, terms: FileQuoteTerms }> {
+  bitfsDebug('go-bitfs', 'seller.quote.create', () => ({ facts, seedHash: terms.seedHash, fileSizeBytes: terms.fileSizeBytes, seedPriceSatoshis: terms.seedPriceSatoshis, fullBlockPriceSatoshis: terms.fullBlockPriceSatoshis }))
   const bound = bindSigner(signer, 'seller_signer')
   const now = requireNow(facts)
   const finalTerms: FileQuoteTerms = { ...terms, supportedArbiterPublicKeys: terms.supportedArbiterPublicKeys.map(copyBytes), seedHash: copyBytes(terms.seedHash), buyerPublicKey: copyBytes(terms.buyerPublicKey), recommendedFilename: sanitizeRecommendedFilename(terms.recommendedFilename) }
@@ -145,6 +147,7 @@ export async function createSellerQuote (facts: Readonly<PureFunctionFacts>, sig
  * 才调用 Signer。金额从退款模板推导，不接收调用方金额。
  */
 export async function prepareSellerPresign (rawKind2: Uint8Array, signer: Signer): Promise<{ outbound: Artifact, opening: SellerOpeningEvidence }> {
+  bitfsDebug('go-bitfs', 'seller.opening.presign', () => ({ requestBytes: rawKind2.byteLength }))
   const bound = bindSigner(signer, 'seller_signer')
   const request = decodeKind2Request(rawKind2)
   if (!equal(bound.publicKey(), request.sellerPublicKey)) throw new WireError('unauthorized', 2, 'seller_public_key', '开池请求未绑定当前卖方身份')
@@ -230,6 +233,53 @@ async function preflightSellerDelivery (facts: Readonly<PureFunctionFacts>, quot
   }
 }
 
+/** 验证历史 exact Kind 1 的结构与签名，不判断当前购买资格。
+ * 仅供既有证据恢复、展示与合作关闭；新购买仍须 acceptBuyerQuote/购买步骤的时序验证。 */
+export function inspectFileQuoteEvidence (rawKind1: Uint8Array): VerifiedQuote {
+  return verifyQuoteEvidence(decodeKind1Quote(rawKind1))
+}
+
+/** 条款ID用于定位报价证据，不代表报价签名有效。 */
+export function inspectFileQuoteReference (rawKind1: Uint8Array): Uint8Array {
+  return sha256(decodeKind1Quote(rawKind1).fileQuoteTermsCBOR)
+}
+
+/** 只提取池/授权的确定性寻址引用，不代表角色签名、金额或状态已验收。
+ * 应用定位本地证据后，仍须调用对应买方/卖方步骤完成验证。 */
+export function inspectPoolArtifactReference (raw: Uint8Array): { refundTemplateTxID?: Uint8Array, paymentAuthorizationID?: Uint8Array, buyerPublicKey?: Uint8Array, sellerPublicKey?: Uint8Array } {
+  switch (parse(raw).kind) {
+    case 2: {
+      const request = decodeKind2Request(raw)
+      return { refundTemplateTxID: transactionID(request.refundTemplateRaw), buyerPublicKey: copyBytes(request.buyerPublicKey), sellerPublicKey: copyBytes(request.sellerPublicKey) }
+    }
+    case 3: return { refundTemplateTxID: decodeKind3Response(raw).refundTemplateTxId }
+    case 4: return { refundTemplateTxID: decodeKind4Delivery(raw).refundTemplateTxId }
+    case 5: {
+      const reference = inspectContentRequestReference(raw)
+      return { refundTemplateTxID: reference.refundTemplateTxID, paymentAuthorizationID: reference.paymentAuthorizationID }
+    }
+    case 6: return { paymentAuthorizationID: decodeContentDeliveryDocument(decodeKind6Delivery(raw).contentDeliveryCBOR) }
+    case 7: return { paymentAuthorizationID: decodeKind7Update(raw).paymentAuthorizationId }
+    case 12: return { refundTemplateTxID: decodePoolCloseRequest(raw).refundTemplateTxID }
+    case 13: return { refundTemplateTxID: decodePoolCloseResponse(raw).refundTemplateTxID }
+    default: throw new WireError('unsupported_kind', parse(raw).kind, 'pool_reference', '该报文没有池或付款授权引用')
+  }
+}
+
+/** 仅解析 Kind 5 的证据引用用于路由，不验证签名或购买资格。
+ * 定位证据后仍须调用 inspectSellerDeliveryRequest 完成全部验证。 */
+export function inspectContentRequestReference (rawKind5: Uint8Array): {
+  fileQuoteTermsID: Uint8Array, refundTemplateTxID: Uint8Array, paymentAuthorizationID: Uint8Array
+} {
+  const request = decodeKind5Request(rawKind5)
+  const authorization = decodePaymentAuthorization(request.paymentAuthorizationCBOR)
+  return {
+    fileQuoteTermsID: copyBytes(authorization.fileQuoteTermsID),
+    refundTemplateTxID: copyBytes(authorization.refundTemplateTxID),
+    paymentAuthorizationID: sha256(request.paymentAuthorizationCBOR),
+  }
+}
+
 /**
  * 严格解析并预检 exact Kind 5，返回授权 ID、目标付款序号与有序内容哈希，
  * 使应用能在读取内容仓库前完成协议门禁。该摘要不证明 payload 可用、属于
@@ -277,6 +327,7 @@ export async function inspectBuyerPool (pool: BuyerPoolEvidence): Promise<{ paym
  * 与本证据包。
  */
 export async function prepareSellerDelivery (facts: Readonly<PureFunctionFacts>, input: DeliveryInput, signer: Signer): Promise<{ outbound: Artifact, evidence: SellerDeliveryEvidence }> {
+  bitfsDebug('go-bitfs', 'seller.delivery.prepare', () => ({ facts }))
   const bound = bindSigner(signer, 'seller_signer')
   const signedQuote = decodeKind1Quote(input.quoteRaw)
   const checkpoint = await sellerPoolCheckpoint(input.pool)
@@ -300,6 +351,7 @@ export async function prepareSellerDelivery (facts: Readonly<PureFunctionFacts>,
  * +1、金额不倒退、容量足够，验过买方签名后补签并合并完整交易。
  */
 export async function completeSellerPayment (facts: Readonly<PureFunctionFacts>, input: CompletePaymentInput, signer: Signer): Promise<{ rawTransaction: Uint8Array, pool: SellerPoolEvidence }> {
+  bitfsDebug('go-bitfs', 'seller.payment.complete', () => ({ facts }))
   const bound = bindSigner(signer, 'seller_signer')
   const checkpoint = await sellerPoolCheckpoint(input.pool)
   const opening = checkpoint.opening
@@ -333,6 +385,7 @@ export async function completeSellerPayment (facts: Readonly<PureFunctionFacts>,
  * 返回完整交易原文，是否广播由应用决定。
  */
 export async function completeSellerClose (facts: Readonly<PureFunctionFacts>, input: CompleteCloseInput, signer: Signer): Promise<Uint8Array> {
+  bitfsDebug('go-bitfs', 'seller.close.complete', () => ({ facts }))
   const checkpoint = await sellerPoolCheckpoint(input.pool)
   return await completeSellerCloseForOpening(facts, checkpoint, input.unsignedRaw, input.buyerSignature, signer)
 }
@@ -353,7 +406,7 @@ async function completeSellerCloseForOpening (facts: Readonly<PureFunctionFacts>
     if (!sameCandidate || !equal(checkpoint.payment.buyerTransactionSignature, buyerSignature)) throw new WireError('state_conflict', 0, 'payment_sequence', '费用池已经 final，不能接受另一笔关闭交易')
     return copyBytes(checkpoint.payment.rawTx)
   }
-  checkRefundNotExpired(facts, details.refundLockTime)
+  // 退款成熟只增加退款路径，不禁止双方合作 final 关闭。
   const sellerSignature = await engine.signRole(bound, 'seller', unsignedRaw, details.poolOutputSatoshis)
   const rawTransaction = engine.mergeBuyerSeller(unsignedRaw, Number(details.poolOutputSatoshis), buyerSignature, sellerSignature)
   const state = await parsePaymentState(rawTransaction, opening)
@@ -448,6 +501,7 @@ export function acceptBuyerQuote (facts: Readonly<PureFunctionFacts>, rawKind1: 
  * 纯交易构造，不含时间/高度判断，因此不接收 facts。
  */
 export async function prepareBuyerOpening (input: PrepareOpeningInput, signer: Signer): Promise<{ outbound: Artifact, opening: BuyerOpeningEvidence }> {
+  bitfsDebug('go-bitfs', 'buyer.opening.prepare', () => ({ role: 'buyer' }))
   const bound = bindSigner(signer, 'buyer_signer')
   const quote = verifyQuoteEvidence(decodeKind1Quote(input.quoteRaw))
   if (!equal(quote.terms.buyerPublicKey, bound.publicKey())) throw new WireError('unauthorized', 2, 'buyer_public_key', 'Signer 不是报价命名的买方')
@@ -476,6 +530,7 @@ export async function prepareBuyerOpening (input: PrepareOpeningInput, signer: S
  * 开池证据包与初始池证据包。
  */
 export async function completeBuyerOpening (opening: BuyerOpeningEvidence, rawKind3: Uint8Array): Promise<{ opening: BuyerOpeningEvidence, pool: BuyerPoolEvidence }> {
+  bitfsDebug('go-bitfs', 'buyer.opening.complete', () => ({ responseBytes: rawKind3.byteLength }))
   const request = decodeKind2Request(opening.rawKind2)
   const response = decodeKind3Response(rawKind3)
   const engine = new MultisigPoolEngine({ buyerPublicKey: request.buyerPublicKey, sellerPublicKey: request.sellerPublicKey, arbiterPublicKey: request.arbiterPublicKey })
@@ -521,6 +576,7 @@ export async function prepareBuyerFundingDelivery (pool: BuyerPoolEvidence): Pro
  * 返回待发送 Artifact 与必须先持久化的普通授权证据包。
  */
 export async function prepareBuyerContentRequest (facts: Readonly<PureFunctionFacts>, input: RequestContentInput, signer: Signer): Promise<{ outbound: Artifact, authorization: BuyerAuthorizationEvidence }> {
+  bitfsDebug('go-bitfs', 'buyer.content.request', () => ({ facts }))
   const bound = bindSigner(signer, 'buyer_signer')
   const now = requireNow(facts)
   const signedQuote = decodeKind1Quote(input.quoteRaw)
@@ -574,6 +630,7 @@ export async function prepareBuyerContentRequest (facts: Readonly<PureFunctionFa
  * 先验 payload 与 seed 归属，再签 Kind 7；不产生“已付款”状态。
  */
 export async function verifyBuyerDelivery (facts: Readonly<PureFunctionFacts>, input: VerifyDeliveryInput, signer: Signer): Promise<{ payloads: Uint8Array[], outbound: Artifact }> {
+  bitfsDebug('go-bitfs', 'buyer.delivery.verify', () => ({ facts }))
   const bound = bindSigner(signer, 'buyer_signer')
   const now = requireNow(facts)
   const signedQuote = decodeKind1Quote(input.authorization.rawKind1)
@@ -624,7 +681,7 @@ async function prepareBuyerCloseArtifactData (facts: Readonly<PureFunctionFacts>
   const opening = checkpoint.opening
   if (!equal(bound.publicKey(), opening.buyerPublicKey)) throw new WireError('unauthorized', 0, 'buyer_public_key', 'Signer 与开池买方不一致')
   const details = await deriveOpeningDetails(opening)
-  checkRefundNotExpired(facts, details.refundLockTime)
+  // 合作关闭不受退款成熟时间限制，仍不允许减掉历史已签付款。
   if (input.targetSellerAmountSatoshis < checkpoint.payment.sellerAmountSatoshis) throw new WireError('state_conflict', 12, 'target_seller_amount_satoshis', '关池金额不能低于已签付款')
   const unsignedRaw = checkpoint.buyerLocal === true
     ? await buildBuyerLocalState(opening, checkpoint.payment, FINAL_POOL_SEQUENCE, input.targetSellerAmountSatoshis)
@@ -655,6 +712,7 @@ export async function verifyBuyerCompletedClose (input: VerifyCompletedCloseInpu
 
 /** 严格解析 Kind 13、核对费用池关联 ID 并验证完整关闭交易。 */
 export async function verifyBuyerCompletedCloseArtifact (input: VerifyCompletedCloseArtifactInput): Promise<Uint8Array> {
+  bitfsDebug('go-bitfs', 'buyer.close.verify')
   const response = decodePoolCloseResponse(input.responseRaw)
   const checkpoint = await buyerPoolCheckpoint(input.pool)
   const details = await deriveOpeningDetails(checkpoint.opening)
@@ -1354,7 +1412,16 @@ class BoundSigner implements Signer {
     this.#publicKey = publicKey
   }
   publicKey (): Uint8Array { return copyBytes(this.#publicKey) }
-  async sign (request: Parameters<Signer['sign']>[0], signal?: AbortSignal): Promise<Uint8Array> { return await this.#delegate.sign(request, signal) }
+  async sign (request: Parameters<Signer['sign']>[0], signal?: AbortSignal): Promise<Uint8Array> {
+    const finish = bitfsDebugStart('go-bitfs', 'sign.bound')
+    bitfsDebug('go-bitfs', 'sign.request', () => ({ purpose: request.purpose, kind: request.wireKind, publicKey: this.#publicKey }))
+    try {
+      const result = await this.#delegate.sign(request, signal)
+      bitfsDebug('go-bitfs', 'sign.returned', () => ({ purpose: request.purpose, kind: request.wireKind, signatureBytes: result.byteLength }))
+      finish()
+      return result
+    } catch (error) { finish(error); throw error }
+  }
 }
 
 function bindSigner (signer: Signer | undefined, field: string): Signer { return new BoundSigner(signer as Signer, field) }

@@ -36,6 +36,15 @@ Step 008 is read-only content recovery from arbiter custody. It is **not** a buy
 
 The current CDDL is under `spec/v1/`; retired iterations are archived under `spec/legacy/`. Every complete wire message starts with `[protocol.WireVersion, wire_kind, ...]` and travels as a parsed `wire.Artifact` whose `Bytes()` returns an immutable copy of the exact bytes. Transaction scripts, fees, signatures, and state construction are delegated to the published MultisigPool v4 implementations. The optional libp2p byte transport is standardized by this repository's thin `transport` adapters over `bitcoin-libp2p`; host lifecycle, routing, retries, database adapters, time sources, and block-height sources remain application-owned. Protocol time and height enter explicitly as `protocol.Facts{Now, BlockHeight}` per Go call.
 
+## 调试出口
+
+Go 使用 `debug.SetSink(func(debug.Event) { ... })`（导入
+`github.com/bsv8/go-bitfs/debug`），`debug.SetSink(nil)` 关闭；TS 使用
+`setBitfsDebugSink`，见 [TS 使用说明](typescript/README.md#调试输出)。
+默认关闭，SDK 不猜 dev 环境、不写日志文件。事件包含运行编号、序号、时间、协议
+步骤/签名/解析与错误。宿主 sink 须并发安全、快速返回、不回调 SDK；sink panic/抛错
+隔离，不能改变交易结果。二进制只提供长度/哈希，不能把秘密或正文拼入普通字段。
+
 ## Quick start
 
 SDK = 无状态计算器 + 验钞机：每个入口只接收原始报文字节、普通证据包与一次调用专用的受约束 Signer，返回原始报文字节或普通证据包。SDK 不持有跨步骤对象、不保存进度、不定价策略、不碰钱包、不广播、不读时钟、不访问存储。应用负责进度、状态机、存储、恢复、重试、对账与广播。

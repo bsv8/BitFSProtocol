@@ -1,3 +1,4 @@
+import { bitfsDebug, bitfsDebugStart } from './debug.js'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { encodeCanonical } from './cbor.js'
@@ -73,6 +74,16 @@ export function verifyWireDocument (publicKey: Uint8Array, kind: WireKind, docum
 
 /** 通过受约束 Signer 签署并用构造时公钥立即自验。 */
 export async function signWireDocument (signer: Signer, kind: WireKind, documentCBOR: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
+  const finish = bitfsDebugStart('go-bitfs', 'sign.wire')
+  try {
+    const result = await signWireDocumentExact(signer, kind, documentCBOR, signal)
+    bitfsDebug('go-bitfs', 'sign.wire.accepted', () => ({ kind, documentBytes: documentCBOR.byteLength, signatureBytes: result.byteLength }))
+    finish()
+    return result
+  } catch (error) { finish(error); throw error }
+}
+
+async function signWireDocumentExact (signer: Signer, kind: WireKind, documentCBOR: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
   if (signal?.aborted === true) throw new WireError('canceled', kind, '', '签名操作已取消')
   const publicKey = new Uint8Array(signer.publicKey())
   if (publicKey.byteLength !== 33 || !secp256k1.utils.isValidPublicKey(publicKey, true)) throw new WireError('invalid_evidence', kind, 'public_key', 'Signer 公钥无效')

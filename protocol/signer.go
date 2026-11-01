@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	bitfsdebug "github.com/bsv8/go-bitfs/debug"
+	"time"
 )
 
 // SigningPurpose 标记一次签名请求的业务目的，只供 HSM/KMS 策略审计；
@@ -74,7 +76,16 @@ type boundSigner struct {
 
 func (s *boundSigner) PublicKey() PublicKey { return s.publicKey }
 
-func (s *boundSigner) Sign(ctx context.Context, request SigningRequest) ([]byte, error) {
+func (s *boundSigner) Sign(ctx context.Context, request SigningRequest) (signature []byte, failure error) {
+	started := time.Now()
+	bitfsdebug.Log("go-bitfs", "sign.start", func() any {
+		return map[string]any{"purpose": request.Purpose.String(), "kind": request.WireKind, "publicKey": s.publicKey}
+	})
+	defer func() {
+		bitfsdebug.Log("go-bitfs", "sign.finish", func() any {
+			return map[string]any{"purpose": request.Purpose.String(), "kind": request.WireKind, "signatureBytes": len(signature), "elapsedMs": float64(time.Since(started).Microseconds()) / 1000, "error": failure}
+		})
+	}()
 	return s.delegate.Sign(ctx, request)
 }
 

@@ -540,9 +540,7 @@ func (workflow *workflow) CompleteClose(ctx context.Context, facts protocol.Fact
 		}
 		return pool.VerifySignedTransaction(command.Pool.payment.RawTx, opening)
 	}
-	if err := refundGate(op, facts, details.RefundLockTime); err != nil {
-		return nil, err
-	}
+	// 退款成熟不禁止双方合作关闭，角色签名、final 结构及金额仍全部验证。
 	if unsigned.SellerAmountSatoshis+unsigned.BuyerAmountSatoshis+unsigned.ArbiterAmountSatoshis > details.PoolOutputSatoshis {
 		return nil, protocol.Errorf(op, protocol.CodeInsufficientBalance, 0, "outputs_satoshis", "immediate close outputs exceed the pool capacity")
 	}

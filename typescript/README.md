@@ -16,6 +16,16 @@
 网络使用 `bitcoin-libp2p` 的标准 Noise/Yamux 身份宿主和 uvarint stream 分帧。
 BitFS transport 只投递 exact Artifact bytes，不增加 session、pool ID 或 JSON envelope。
 
+## 调试输出
+
+SDK 默认不输出日志、不读宿主环境、不写文件。宿主在 dev 模式调用
+`setBitfsDebugSink(event => console.debug('[bitfs-debug] ' + JSON.stringify(event)))`，
+用 `setBitfsDebugSink(undefined)` 关闭。该出口覆盖当前 JS runtime 的 SDK 调试事件；
+`bitfsDebug(source, event, () => details)` 可供宿主共用格式。字段含运行编号、序号、
+UTC/单调时间、事件和详情，关闭时详情函数不求值。二进制只输出长度/哈希，常见秘密
+字段会被替换；禁止把私钥、密码、令牌或正文改名后放进普通文本/错误。输出器必须
+同步、快速且不回调 SDK，抛错会隔离。持久保存由宿主外部收集器负责。
+
 ## 纯函数边界
 
 SDK 不再提供 `BuyerWorkflow`/`SellerWorkflow`/`ArbiterWorkflow` 等跨步骤对象。角色

@@ -478,13 +478,8 @@ func (workflow *workflow) PrepareClose(ctx context.Context, facts protocol.Facts
 	if err := engine.VerifyOpening(opening); err != nil {
 		return nil, err
 	}
-	details, err := pool.DeriveOpeningDetails(opening)
-	if err != nil {
-		return nil, err
-	}
-	if err := facts.CheckRefundNotExpired(protocol.RefundLockTime(details.RefundLockTime)); err != nil {
-		return nil, protocol.WrapClassified(err, op, 0, "refund_locktime")
-	}
+	// 双方合作的 final 分支不以退款成熟为截止；成熟只增加退款路径。
+	// 交易是否仍可花费由宿主链上事实与 exact 提交结果确认。
 	base := pool.ClonePaymentState(command.Base)
 	if base == nil {
 		return nil, protocol.Errorf(op, protocol.CodeInvalidEvidence, 0, "base_payment_state", "base payment state is required")

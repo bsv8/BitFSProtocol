@@ -102,12 +102,13 @@ export function decodeSupportedArbiterPublicKeys (raw: Uint8Array): Uint8Array[]
   let value: CBORValue
   try { value = decodeCanonical(raw, 'supported_arbiter_public_keys_cbor') } catch (error) { throw wrapMalformed(op, 'supported_arbiter_public_keys_cbor', error) }
   if (!Array.isArray(value)) throw malformed(op, 'supported_arbiter_public_keys_cbor', '字段必须是 CBOR array')
-  const keys = value.map((item, index) => {
+  const keys: Uint8Array[] = []
+  for (const [index, item] of value.entries()) {
     if (!(item instanceof Uint8Array)) throw malformed(op, 'supported_arbiter_public_keys_cbor', '元素必须是 CBOR bstr')
     if (item.byteLength !== 33 || !secp256k1.utils.isValidPublicKey(item, true)) throw invalid(op, 'supported_arbiter_public_keys_cbor', `仲裁公钥 #${index + 1} 无效`)
     for (let previous = 0; previous < index; previous++) if (equalBytes(keys[previous]!, item)) throw invalid(op, 'supported_arbiter_public_keys_cbor', `仲裁公钥 #${index + 1} 重复`)
-    return copyBytes(item)
-  })
+    keys.push(copyBytes(item))
+  }
   if (!equalBytes(encodeArbiterKeys(keys), raw)) throw new WireError('non_canonical', 0, 'supported_arbiter_public_keys_cbor', '仲裁公钥子文档不是确定性编码')
   return keys
 }
@@ -419,7 +420,8 @@ async function classifyContent (op: string, terms: FileQuoteTerms, contentHashes
   return result
 }
 
-function blockPriceSatoshis (fullBlockPriceSatoshis: bigint, blockSize: bigint): bigint {
+/** 报价条款到单块费用的协议事实；完整块原价，尾块按长度向上取整并让利10%。 */
+export function blockPriceSatoshis (fullBlockPriceSatoshis: bigint, blockSize: bigint): bigint {
   if (blockSize === 0n || blockSize > CONTENT_BLOCK_SIZE) throw invalid('content.blockPriceSatoshis', 'block_size', `块长度 ${blockSize} 无效`)
   if (blockSize === CONTENT_BLOCK_SIZE) return fullBlockPriceSatoshis
   if (fullBlockPriceSatoshis === 0n) return 0n

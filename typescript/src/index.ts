@@ -1,3 +1,4 @@
+export * from './debug.js'
 export * from './constants.js'
 export * from './errors.js'
 export * from './protocol.js'
