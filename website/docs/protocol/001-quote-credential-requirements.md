@@ -15,7 +15,7 @@ The most critical requirement here is not "being able to look up a quote in a da
 
 - A quote targets exactly one buyer public key; BitFS does not support open multi-buyer quotes.
 - Quotes have no effective time, only an expiration time.
-- Quotes provide only the seed price and the complete-block price; the final partial block is calculated from the actual file size derived from the file seed, and the seller should grant the buyer a 10% margin for calculation tolerance.
+- Quotes provide the seed price, the complete-block price, and the tail price for the manifest's last hash (computed by the seller from its own file with the unchanged proportional formula including the 10% margin); buyers use the quoted tail price directly.
 - The recommended filename is only a display suggestion after download; it is not the basis for file identity, pricing, or fulfillment.
 - The arbitrator list represents candidates accepted by the seller; the buyer selects one from this list at the time of purchase.
 

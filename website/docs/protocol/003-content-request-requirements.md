@@ -16,10 +16,10 @@ This is not 005 transaction signing, but it already commits the absolute cumulat
 003 carries an ordered batch of 1–64 unique 32-byte content hashes (`ContentHashesCBOR`, a deterministic CBOR child document embedded as `bstr`). There is no sender-declared content type:
 
 - A hash equal to the quote's `SeedHash` is recognized as the seed, priced at `SeedPriceSatoshis`.
-- Every other hash MUST be found in that seed's block hash list, priced at its position's protocol expected length (full blocks at `FullBlockPriceSatoshis`; tail blocks with the proportional round-up and 10% seller calculation rule).
+- Every other hash MUST be found in that seed's block hash list (verified by hash only, never by quoted lengths). A hash matching the seed's last position is priced at the quoted `TailPriceSatoshis`; all other listed hashes are priced at `FullBlockPriceSatoshis`.
 - A hash found nowhere returns `ErrContentNotInSeed`.
 - Order is part of the authorization: hashes are never sorted, deduplicated, or reordered before acceptance. Duplicate entries are rejected outright.
-- If the same hash occurs at multiple seed positions, it is purchased once and reused for every identical position in file reconstruction. If those positions imply conflicting expected lengths, the evidence is ambiguous and the whole request is rejected.
+- If the same hash occurs at multiple seed positions, it is purchased once and reused for every identical position in file reconstruction; a match at the last position makes the whole unique purchase a tail purchase.
 - When the batch includes any block, the buyer MUST already hold a verified seed whose hash equals the quote's `SeedHash`. Mixed seed+block batches are allowed only under that condition; buyers who do not have the seed purchase it alone first.
 
 ## How the Fee Pool Is Addressed

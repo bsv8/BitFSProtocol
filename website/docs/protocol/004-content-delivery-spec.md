@@ -42,7 +42,7 @@ Acceptance order for the buyer: locate the saved original 003 by its
 `PaymentAuthorizationID`; strictly decode `content_delivery_cbor` and require
 it to commit to exactly that ID; verify the seller signature over the exact
 document with the OpeningProof's seller key; strictly decode the payloads and
-verify count, order, per-item SHA-256, membership, and expected lengths;
+verify count, order, per-item SHA-256, seed hash, and Seed-only membership;
 recompute the aggregate price, target sequence, and absolute cumulative
 amount. Only when every item succeeds does the buyer build and sign the
 rebuilt state transaction locally, sending only the minimal 005 credential

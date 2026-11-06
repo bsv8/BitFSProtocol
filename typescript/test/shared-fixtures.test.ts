@@ -27,8 +27,9 @@ import {
   generateRetrievalNonce, inspectSellerDeliveryRequest, MultisigPoolEngine, newRetrievalNonce, parse, parseUnsignedPayment, parseArbitratedPoolLockingScript,
   parseAs, paymentAuthorizationID, prepareArbiterArbitration, prepareBuyerClose, prepareBuyerCloseArtifact,
   prepareBuyerContentRequest, prepareBuyerFundingDelivery, prepareBuyerOpening, prepareSellerArbitration,
-  prepareSellerDelivery, prepareSellerPresign, readArtifacts, requestBuyerArbitratedContent,
+  prepareSellerDelivery, prepareSellerPresign, readArtifacts,   requestBuyerArbitratedContent,
   authenticateArbiterRetrieval, signArbiterPreparedArbitration, signWireDocument, transactionID,
+  sellerTailPriceSatoshis,
   verifyArbiterCustody, verifyArbitrationCandidate, verifyBuyerArbitratedContent, verifyBuyerCompletedClose,
   verifyBuyerDelivery, verifyContentPayloads, verifyContentRequestEvidence, verifySellerFunding,
   verifyBuyerCompletedCloseArtifact, verifyWireDocument, wireSignatureDigest, writeArtifact,
@@ -100,10 +101,11 @@ type RoleFixture = {
     name: string
     seed_price_satoshis: number | string
     full_block_price_satoshis: number | string
+    tail_price_satoshis: number | string
     file_size_bytes: number | string
     seed_hex: string
     hashes_hex: string[]
-    expect_classification?: Array<{ is_seed: boolean, block_size: number }>
+    expect_classification?: Array<{ is_seed: boolean, is_tail: boolean }>
     expect_price_satoshis?: string
     expect_error_code?: string
   }>
@@ -302,6 +304,7 @@ function priceVectorTerms (vector: RoleFixture['price_vectors'][number]): FileQu
     buyerPublicKey: buyer.publicKey(),
     seedPriceSatoshis: BigInt(vector.seed_price_satoshis),
     fullBlockPriceSatoshis: BigInt(vector.full_block_price_satoshis),
+    tailPriceSatoshis: BigInt(vector.tail_price_satoshis),
     fileSizeBytes: BigInt(vector.file_size_bytes),
     quoteExpiresAtUnixSeconds: 2000000000n,
     supportedArbiterPublicKeys: [arbiter.publicKey()],
@@ -540,6 +543,7 @@ describe('Go 与 TypeScript 共享 wire 真值', () => {
       buyerPublicKey: new TestSigner(0x44).publicKey(),
       seedPriceSatoshis: 100n,
       fullBlockPriceSatoshis: 1000n,
+      tailPriceSatoshis: 15n,
       fileSizeBytes: 4096n,
       quoteExpiresAtUnixSeconds: 2000000000n,
       supportedArbiterPublicKeys: [new TestSigner(0x33).publicKey()],
@@ -639,6 +643,7 @@ describe('角色纯函数跨语言真值（fixtures/role-v1.json）', () => {
       buyerPublicKey: buyer.publicKey(),
       seedPriceSatoshis: 100n,
       fullBlockPriceSatoshis: 1000n,
+      tailPriceSatoshis: sellerTailPriceSatoshis(1000n, BigInt(roleFixture.quote.file_size_bytes)),
       fileSizeBytes: BigInt(roleFixture.quote.file_size_bytes),
       quoteExpiresAtUnixSeconds: 2000000000n,
       supportedArbiterPublicKeys: [arbiter.publicKey()],
@@ -883,7 +888,7 @@ describe('角色纯函数跨语言真值（fixtures/role-v1.json）', () => {
         const classification = await classifyContentHashes(terms, hashes, vectorSeed)
         classificationOk = true
         if (vector.expect_classification != null) {
-          expect(classification).toEqual(vector.expect_classification.map(item => ({ isSeed: item.is_seed, blockSize: BigInt(item.block_size) })))
+          expect(classification).toEqual(vector.expect_classification.map(item => ({ isSeed: item.is_seed, isTail: item.is_tail })))
         }
       } catch (error) {
         expect(error).toMatchObject({ code: vector.expect_error_code })

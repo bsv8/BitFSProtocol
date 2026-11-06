@@ -21,10 +21,10 @@ type QuoteDraft struct {
 	BuyerPublicKey protocol.PublicKey
 	// SeedPriceSatoshis 是整个 MasterSeed 的绝对单价（绝对聪数）。
 	SeedPriceSatoshis protocol.Satoshis
-	// FullBlockPriceSatoshis 是一个完整块（256 KiB）的绝对单价（绝对聪数）；
-	// 尾块按比例并享 10% 让利。
+	// FullBlockPriceSatoshis 是一个完整块（256 KiB）的绝对单价（绝对聪数）。
 	FullBlockPriceSatoshis protocol.Satoshis
-	// FileSizeBytes 是文件总字节数；块数由它派生。
+	// FileSizeBytes 是卖方本地文件总字节数；SDK 据此按既有公式计算签名报价
+	// 的 TailPriceSatoshis，买方直接采用报价尾价，不再推导。
 	FileSizeBytes uint64
 	// QuoteExpiresAtUnixSeconds 是报价失效时间（UTC Unix 秒）；必须晚于 Facts.Now。
 	QuoteExpiresAtUnixSeconds content.UnixSeconds

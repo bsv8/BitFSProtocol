@@ -39,8 +39,9 @@ CBOR 数组位置固定如下：
 | 7 | `recommended_filename` | 经 sanitize 的展示建议；与其他条款一样由卖方签名。 |
 | 9 | `media_type` | 卖方声明的规范小写 MIME（最多 255 字节，无参数）；签名及报价 ID 覆盖。 |
 | 8 | `max_blocks_per_batch` | 卖方每批最大 Block 数；必填整数 1–64，计入签名和报价 ID，Seed 不计入。 |
+| 10 | `tail_price_satoshis` | 清单末项 Hash 的报价（satoshi），由卖方签名；买方直接采用。 |
 
-认证文档不携带版本或 Kind 字段。块数必须由 `file_size_bytes` 推导：`0` 对应 `0` 块；正数对应 `ceil(file_size_bytes / 262144)`。每个 payload 不超过一个 MasterSeed 块（256 KiB）。仲裁公钥数组可为空，但其中公钥不得为空或重复。`recommended_filename` 必须先通过 sanitize 规则再编码和签名；因为它进入条款，仅文件名不同的两份报价具有不同的 `file_quote_terms_id`。
+认证文档不携带版本或 Kind 字段。完整有序块清单仅来自已验证 seed 字节（`len(seed)/32` 个位置，保留重复）；`file_size_bytes` 仅为展示声明，不得决定归属、定价与完成。每个 payload 不超过一个 MasterSeed 块（256 KiB）。仲裁公钥数组可为空，但其中公钥不得为空或重复。`recommended_filename` 必须先通过 sanitize 规则再编码和签名；因为它进入条款，仅文件名不同的两份报价具有不同的 `file_quote_terms_id`。
 
 ## `SignedFileQuote`
 
@@ -60,7 +61,7 @@ seller_file_quote_terms_signature  ; SignWireDocument(1, 1, ...)
 
 ## 尾块
 
-报价不传尾块价格。实现按实际尾块长度相对于一个 MasterSeed 块的比例计算，并采用卖方 10% 计算误差让利规则。该规则不是自动仲裁的唯一整数公式；005 中买方签出的累计金额是最终可执行金额。
+报价携带末项 Hash 的 `tail_price_satoshis`，由卖方按本地文件用既有比例公式（含 10% 让利；整块尾与空文件按完整块价）计算并签名。买方与验证方对 seed 末项位置直接采用报价尾价，不得按 `file_size_bytes` 重算。命中末项的哈希（含它处重复）按尾价一次性计费；其余清单块按完整块价。该规则不是自动仲裁的唯一整数公式；005 中买方签出的累计金额是最终可执行金额。
 
 ## Go API
 
@@ -79,6 +80,7 @@ terms := &content.FileQuoteTerms{
     SupportedArbiterPublicKeysCBOR: supportedCBOR,
     RecommendedFilename:            "download.bin", // sanitize 后的唯一文件名来源
     MaxBlocksPerBatch:           4, // 卖方每批最多接受 4 个 Block
+    TailPriceSatoshis:           tailPriceSatoshis, // 卖方按本地文件用 SellerTailPriceSatoshis 计算
 }
 signedQuote, err := content.NewSignedFileQuote(ctx, terms, sellerSigner)
 outboundKind1, err := wire.EncodeFileQuote(signedQuote) // exact bytes：先持久化再发送

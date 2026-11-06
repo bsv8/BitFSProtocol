@@ -44,10 +44,12 @@ CBOR array positions are fixed as follows:
 | 7 | `recommended_filename` | Sanitized display suggestion; signed by the seller like every other term. |
 | 9 | `media_type` | 卖方声明的规范小写 MIME（最多 255 字节，无参数）；签名及报价 ID 覆盖。 |
 | 8 | `max_blocks_per_batch` | 卖方每批最大 Block 数；必填整数 1–64，计入签名和报价 ID，Seed 不计入。 |
+| 10 | `tail_price_satoshis` | 清单末项 Hash 的报价（satoshi），由卖方签名；买方直接采用。 |
 
-The authentication document carries no version or kind field. The block
-count MUST be derived from `file_size_bytes`: `0` maps to `0` blocks; a
-positive value maps to `ceil(file_size_bytes / 262144)`. Each payload is at
+The authentication document carries no version or kind field. The complete
+ordered block list comes from the verified seed bytes only (`len(seed) / 32`
+positions, duplicates preserved); `file_size_bytes` is a display claim only
+and MUST NOT decide membership, pricing, or completion. Each payload is at
 most one MasterSeed block (256 KiB). The arbiter public key array MAY be
 empty, but public keys within it MUST NOT be empty or duplicated.
 `recommended_filename` MUST pass the sanitize rules before encoding and
@@ -85,9 +87,13 @@ constitutes the evidence package.
 
 ## Tail block
 
-Quotes do not carry a tail-block price. Implementations MUST calculate the
-tail block proportionally based on its actual length relative to one MasterSeed
-block, applying a 10% calculation tolerance concession on the seller's side.
+Quotes carry an explicit `tail_price_satoshis` for the manifest's last hash,
+computed by the seller from its own file with the unchanged proportional
+formula (10% seller concession; full-size and empty tails quote the full block
+price). Buyers and verifiers MUST use the quoted tail price directly for the
+last seed position and MUST NOT re-derive it from `file_size_bytes`. A hash
+matching the last position (including duplicates elsewhere) is charged once at
+the tail price; all other listed blocks use `full_block_price_satoshis`.
 This rule is not the sole integer formula for automatic arbitration; the
 cumulative amount signed out by the buyer in 005 is the final enforceable
 amount.
@@ -109,6 +115,7 @@ terms := &content.FileQuoteTerms{
     SupportedArbiterPublicKeysCBOR: supportedCBOR,
     RecommendedFilename:            "download.bin", // sanitize 后的唯一文件名来源
     MaxBlocksPerBatch:           4, // 卖方每批最多接受 4 个 Block
+    TailPriceSatoshis:           tailPriceSatoshis, // 卖方按本地文件用 SellerTailPriceSatoshis 计算
 }
 signedQuote, err := content.NewSignedFileQuote(ctx, terms, sellerSigner)
 outboundKind1, err := wire.EncodeFileQuote(signedQuote) // exact bytes：先持久化再发送
@@ -125,3 +132,5 @@ implementation. Time-sensitive checks take the caller's explicit facts
 `max_blocks_per_batch`（卖方每批最多接受的 Block 数）是报价的第九项必填整数，范围 1–64，进入卖方签名及报价 ID；Seed 不计入 Block 数，总内容条目仍不得超过 64。买方策略器可请求更少的块。0.4.0 在开发阶段保持 Wire v1，直接以九项报价替换旧八项报价，不设置默认值或兼容分支。
 
 0.5.0 报价为十项，第十项 MIME 为必填；开发期 WireVersion 保持 1。
+
+尾价报价为十一项，第十一项 `tail_price_satoshis` 为必填，由卖方签名；开发期 WireVersion 保持 1，直接以十一项报价替换十项报价，不设置默认值或兼容分支。旧十项报价字节一律拒绝。

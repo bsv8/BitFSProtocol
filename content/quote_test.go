@@ -127,22 +127,26 @@ func TestSignedFileQuoteRejectsChangedTerms(t *testing.T) {
 	}
 }
 
-func TestFileQuoteTermsRejectsOversizedFile(t *testing.T) {
-	terms := quoteTestTerms(t)
-	terms.FileSizeBytes = MaxQuoteFileSize + 1
-	if err := ValidateFileQuoteTerms(terms); err == nil {
-		t.Fatal("ValidateFileQuoteTerms() accepted a file whose seed cannot fit in one payload")
+func TestFileQuoteTermsIgnoresDeclaredSizeForValidity(t *testing.T) {
+	// 声明长度是展示信息：超大值与 0 都不决定有效性。
+	huge := quoteTestTerms(t)
+	huge.FileSizeBytes = MaxQuoteFileSize + 1
+	if err := ValidateFileQuoteTerms(huge); err != nil {
+		t.Fatalf("ValidateFileQuoteTerms() rejected a display-only oversized file size: %v", err)
+	}
+	// 非空 Seed 配 0（未知）必须通过；空与否由已验证 Seed 确定。
+	zero := quoteTestTerms(t)
+	zero.FileSizeBytes = 0
+	if err := ValidateFileQuoteTerms(zero); err != nil {
+		t.Fatalf("ValidateFileQuoteTerms() rejected an unknown file size: %v", err)
 	}
 }
 
-func TestEmptyFileQuoteRequiresEmptySeedHash(t *testing.T) {
+func TestEmptySeedQuoteAcceptsZeroSize(t *testing.T) {
 	terms := quoteTestTerms(t)
-	terms.FileSizeBytes = 0
-	if err := ValidateFileQuoteTerms(terms); err == nil {
-		t.Fatal("ValidateFileQuoteTerms() accepted a non-empty seed hash for an empty file")
-	}
 	emptySeedHash := sha256.Sum256(nil)
 	terms.SeedHash = emptySeedHash[:]
+	terms.FileSizeBytes = 0
 	if err := ValidateFileQuoteTerms(terms); err != nil {
 		t.Fatalf("ValidateFileQuoteTerms() rejected a valid empty file: %v", err)
 	}
@@ -172,11 +176,16 @@ func quoteTestTerms(t *testing.T) *FileQuoteTerms {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tail, err := SellerTailPriceSatoshis(2, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return &FileQuoteTerms{
 		SeedHash:                       bytes.Repeat([]byte{0x11}, sha256.Size),
 		BuyerPublicKey:                 quoteTestPubkey(),
 		SeedPriceSatoshis:              1,
 		FullBlockPriceSatoshis:         2,
+		TailPriceSatoshis:              tail,
 		FileSizeBytes:                  1,
 		QuoteExpiresAtUnixSeconds:      quoteTestFutureUnix(),
 		SupportedArbiterPublicKeysCBOR: arbiters,

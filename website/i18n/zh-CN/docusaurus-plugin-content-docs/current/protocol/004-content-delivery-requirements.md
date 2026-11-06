@@ -22,7 +22,7 @@ SellerSignature -> content_delivery_cbor   （SignWireDocument(1, 6, ...)）
 ContentPayloadsCBOR[i] -> SHA-256 -> ContentHashesCBOR[i]
 ```
 
-payload 未直接入签，因此验收必须逐项执行：数量严格等于哈希数量、顺序保持一致、每项 SHA-256 等于被提交哈希、seed/block 归属与协议期望长度校验，以及重算聚合价格并与绝对累计金额精确匹配。任一项失败即整批拒绝——不允许部分付款、不允许缺失项计零价、不允许按前缀接受。
+payload 未直接入签，因此验收必须逐项执行：数量严格等于哈希数量、顺序保持一致、每项 SHA-256 等于被提交哈希、seed 哈希与 Seed 专属块归属校验，以及重算报价聚合价格并与绝对累计金额精确匹配。任一项失败即整批拒绝——不允许部分付款、不允许缺失项计零价、不允许按前缀接受。
 
 卖方通过统一 `SignWireDocument(1, 6, ...)` 对精确 content_delivery_cbor 签名（对类型化签名输入内部再做一次 SHA-256，low-S DER）；类型化输入把版本和 Kind 与 exact 文档一起纳入认证。对裸哈希、hex 文本、payload 或预哈希摘要的签名都不是本协议。
 

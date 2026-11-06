@@ -68,6 +68,7 @@ type rolePriceVector struct {
 	Name                   string                `json:"name"`
 	SeedPriceSatoshis      uint64                `json:"seed_price_satoshis"`
 	FullBlockPriceSatoshis uint64                `json:"full_block_price_satoshis"`
+	TailPriceSatoshis      uint64                `json:"tail_price_satoshis"`
 	FileSizeBytes          uint64                `json:"file_size_bytes"`
 	SeedHex                string                `json:"seed_hex"`
 	HashesHex              []string              `json:"hashes_hex"`
@@ -77,8 +78,8 @@ type rolePriceVector struct {
 }
 
 type roleClassifiedEntry struct {
-	IsSeed    bool   `json:"is_seed"`
-	BlockSize uint64 `json:"block_size"`
+	IsSeed bool `json:"is_seed"`
+	IsTail bool `json:"is_tail"`
 }
 
 type roleRejectVector struct {
@@ -582,16 +583,16 @@ func buildPriceVectors(t *testing.T, ctx context.Context) []rolePriceVector {
 	unknownHash := bytes.Repeat([]byte{0xEF}, 32)
 
 	vectors := []rolePriceVector{
-		{Name: "seed_only", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 0, HashesHex: []string{hexEncode(masterseed.Sum256(nil).Bytes())}},
-		{Name: "full_block", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: uint64(masterseed.BlockSize), SeedHex: hexEncode(fullSeed), HashesHex: []string{hexEncode(fullHash)}},
-		{Name: "tail_block", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash)}},
-		{Name: "combination", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: uint64(masterseed.BlockSize) + 4096, SeedHex: hexEncode(comboSeed), HashesHex: []string{hexEncode(comboSeedHash), hexEncode(fullHash), hexEncode(tailHash)}},
-		{Name: "zero_full_block_price_tail", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 0, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash)}},
-		{Name: "block_not_in_seed", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(unknownHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
-		{Name: "missing_seed", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 4096, HashesHex: []string{hexEncode(tailHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
-		{Name: "duplicate_hash", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash), hexEncode(tailHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
-		{Name: "wrong_hash_width", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash[:31])}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
-		{Name: "overflow", SeedPriceSatoshis: ^uint64(0), FullBlockPriceSatoshis: ^uint64(0), FileSizeBytes: uint64(masterseed.BlockSize), SeedHex: hexEncode(fullSeed), HashesHex: []string{hexEncode(masterseed.Sum256(fullSeed).Bytes()), hexEncode(fullHash)}, ExpectErrorCode: string(protocol.CodeInsufficientBalance)},
+		{Name: "seed_only", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 1000, FileSizeBytes: 0, HashesHex: []string{hexEncode(masterseed.Sum256(nil).Bytes())}},
+		{Name: "full_block", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 1000, FileSizeBytes: uint64(masterseed.BlockSize), SeedHex: hexEncode(fullSeed), HashesHex: []string{hexEncode(fullHash)}},
+		{Name: "tail_block", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash)}},
+		{Name: "combination", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: uint64(masterseed.BlockSize) + 4096, SeedHex: hexEncode(comboSeed), HashesHex: []string{hexEncode(comboSeedHash), hexEncode(fullHash), hexEncode(tailHash)}},
+		{Name: "zero_full_block_price_tail", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 0, TailPriceSatoshis: 0, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash)}},
+		{Name: "block_not_in_seed", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(unknownHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
+		{Name: "missing_seed", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: 4096, HashesHex: []string{hexEncode(tailHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
+		{Name: "duplicate_hash", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash), hexEncode(tailHash)}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
+		{Name: "wrong_hash_width", SeedPriceSatoshis: 100, FullBlockPriceSatoshis: 1000, TailPriceSatoshis: 15, FileSizeBytes: 4096, SeedHex: hexEncode(tailSeed), HashesHex: []string{hexEncode(tailHash[:31])}, ExpectErrorCode: string(protocol.CodeInvalidEvidence)},
+		{Name: "overflow", SeedPriceSatoshis: ^uint64(0), FullBlockPriceSatoshis: ^uint64(0), TailPriceSatoshis: ^uint64(0), FileSizeBytes: uint64(masterseed.BlockSize), SeedHex: hexEncode(fullSeed), HashesHex: []string{hexEncode(masterseed.Sum256(fullSeed).Bytes()), hexEncode(fullHash)}, ExpectErrorCode: string(protocol.CodeInsufficientBalance)},
 	}
 	// seed_only 的 seedHash 是空 seed 的 SHA-256；classification 需要真实条款。
 	for index := range vectors {
@@ -601,6 +602,7 @@ func buildPriceVectors(t *testing.T, ctx context.Context) []rolePriceVector {
 			BuyerPublicKey:            mustRoleKey(t, "44").PubKey().Compressed(),
 			SeedPriceSatoshis:         vector.SeedPriceSatoshis,
 			FullBlockPriceSatoshis:    vector.FullBlockPriceSatoshis,
+			TailPriceSatoshis:         vector.TailPriceSatoshis,
 			FileSizeBytes:             vector.FileSizeBytes,
 			QuoteExpiresAtUnixSeconds: 2000000000,
 			RecommendedFilename:       "file.bin",
@@ -617,7 +619,7 @@ func buildPriceVectors(t *testing.T, ctx context.Context) []rolePriceVector {
 		classification, classErr := content.ClassifyContentHashes(ctx, terms, hashes, seed)
 		if classErr == nil {
 			for _, item := range classification {
-				vector.ExpectClassification = append(vector.ExpectClassification, roleClassifiedEntry{IsSeed: item.IsSeed, BlockSize: item.BlockSize})
+				vector.ExpectClassification = append(vector.ExpectClassification, roleClassifiedEntry{IsSeed: item.IsSeed, IsTail: item.IsTail})
 			}
 			price, priceErr := content.ContentHashesPriceSatoshis(ctx, terms, hashes, seed)
 			if priceErr == nil {

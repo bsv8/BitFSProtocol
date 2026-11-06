@@ -56,6 +56,7 @@ func goldenQuote(t *testing.T) *content.SignedFileQuote {
 		BuyerPublicKey:                 mustGoldenKey(t, "44").PubKey().Compressed(),
 		SeedPriceSatoshis:              100,
 		FullBlockPriceSatoshis:         1000,
+		TailPriceSatoshis:              15,
 		FileSizeBytes:                  4096,
 		QuoteExpiresAtUnixSeconds:      2000000000,
 		SupportedArbiterPublicKeysCBOR: arbiters,

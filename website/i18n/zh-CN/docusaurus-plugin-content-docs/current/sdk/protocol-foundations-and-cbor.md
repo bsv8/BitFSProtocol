@@ -172,7 +172,7 @@ func NewSignedContentRequest(ctx context.Context, authorization *PaymentAuthoriz
 func CheckContentRequestTiming(requestTerms *PaymentAuthorization, quoteTerms *FileQuoteTerms, at time.Time) error
 
 // VerifyContentPayloadsContext 针对被授权哈希验证交付批次：数量、顺序、逐项
-// SHA-256、seed/block 归属与协议期望长度。整个批次原子成功或失败；返回成员
+// SHA-256、seed 哈希与 Seed 专属块归属。整个批次原子成功或失败；返回成员
 // 校验实际使用的 seed，调用方可用它重算价格。
 func VerifyContentPayloadsContext(ctx context.Context, quoteTerms *FileQuoteTerms, contentHashes, payloads [][]byte, seed []byte) ([]byte, error)
 ```

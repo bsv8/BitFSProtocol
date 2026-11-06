@@ -2,14 +2,14 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import {
   ERROR_CODES,
+  MasterSeedError,
   blockCountForSourceSize,
   Digest,
   expectedBlockSize,
-  findBlockHash,
   isMasterSeedError,
+  readBlockHash,
   verifyBlock,
-  verifyBlockInSeed,
-  verifySeedForSourceSize
+  verifySeed
 } from 'masterseed'
 import { decodeCanonical, encodeCanonical, type CBORValue } from './cbor.js'
 import { MAX_CONTENT_BATCH_ITEMS, MAX_CONTENT_PAYLOAD_BYTES } from './constants.js'
@@ -62,12 +62,12 @@ export interface SignedContentRequest {
   buyerPaymentAuthorizationSignature: Uint8Array
 }
 
-/** 一个内容哈希的证据派生分类：类型与计价长度只来自报价与已验证 seed。 */
+/** 一个内容哈希的证据派生分类：seed 与末项判定只来自报价与已验证 seed。 */
 export interface ClassifiedContent {
-  /** 该哈希是否等于报价 SeedHash（按整份 seed 计价，无 BlockSize）。 */
+  /** 该哈希是否等于报价 SeedHash（按整份 seed 计价）。 */
   isSeed: boolean
-  /** 该块在 seed 中的协议期望长度（1..262144）；isSeed 为 true 时为 0。 */
-  blockSize: bigint
+  /** 该哈希是否命中 seed 末项位置；命中时按报价尾价计价，否则按完整块价。isSeed 为 true 时为 false。 */
+  isTail: boolean
 }
 
 /** 时间无关证据验证的结果：最终条款与验证后的卖方报价。 */
@@ -122,11 +122,12 @@ export function validateFileQuoteTerms (terms: FileQuoteTerms): void {
   if (terms.buyerPublicKey.byteLength !== 33 || !secp256k1.utils.isValidPublicKey(terms.buyerPublicKey, true)) throw invalid(op, 'buyer_public_key', '报价买方公钥无效')
   validateUint64(terms.seedPriceSatoshis, op, 'seed_price_satoshis')
   validateUint64(terms.fullBlockPriceSatoshis, op, 'full_block_price_satoshis')
+  validateUint64(terms.tailPriceSatoshis, op, 'tail_price_satoshis')
   if (!Number.isSafeInteger(terms.maxBlocksPerBatch) || terms.maxBlocksPerBatch < 1 || terms.maxBlocksPerBatch > MAX_CONTENT_BATCH_ITEMS) throw invalid(op, 'max_blocks_per_batch', `卖方每批最大 Block 数必须为 1..${MAX_CONTENT_BATCH_ITEMS}`)
   validateUint64(terms.fileSizeBytes, op, 'file_size_bytes')
+  // FileSizeBytes 仅为卖家声明的展示信息（未知统一填 0），不决定归属、定价与完成；
+  // 空与否由已验证 Seed 的空清单确定。资源耗尽保护施加在实际 Seed、实际块与消息大小上。
   if (terms.quoteExpiresAtUnixSeconds <= 0n || terms.quoteExpiresAtUnixSeconds > MAX_INT64) throw invalid(op, 'quote_expires_at_unix_seconds', '报价失效时间必须是正 Unix 秒')
-  if (terms.fileSizeBytes === 0n && !equalBytes(terms.seedHash, emptySeedHash())) throw invalid(op, 'seed_hash', '空文件的 seed_hash 必须等于空 seed 的 SHA-256')
-  if (blockCountForSourceSize(terms.fileSizeBytes) > MAX_QUOTE_SEED_BLOCKS) throw invalid(op, 'file_size_bytes', `文件大小超过上限 ${MAX_QUOTE_FILE_SIZE}`)
   validateArbiterPublicKeys(terms.supportedArbiterPublicKeys)
   if (terms.recommendedFilename !== sanitizeRecommendedFilename(terms.recommendedFilename) || terms.recommendedFilename.length === 0) throw invalid(op, 'recommended_filename', '推荐文件名不满足 sanitize 规则')
 }
@@ -134,7 +135,7 @@ export function validateFileQuoteTerms (terms: FileQuoteTerms): void {
 /** 严格解码 exact 规范报价条款字节。 */
 export function decodeFileQuoteTerms (raw: Uint8Array): FileQuoteTerms {
   const op = 'content.DecodeFileQuoteTerms'
-  const values = decodeStrictArray(raw, 10, op, 'file_quote_terms_cbor')
+  const values = decodeStrictArray(raw, 11, op, 'file_quote_terms_cbor')
   const terms: FileQuoteTerms = {
     seedHash: bytesField(values[0], op, 'seed_hash'),
     buyerPublicKey: bytesField(values[1], op, 'buyer_public_key'),
@@ -145,7 +146,8 @@ export function decodeFileQuoteTerms (raw: Uint8Array): FileQuoteTerms {
     supportedArbiterPublicKeys: decodeSupportedArbiterPublicKeys(bytesField(values[6], op, 'supported_arbiter_public_keys_cbor')),
     recommendedFilename: textField(values[7], op, 'recommended_filename'),
     maxBlocksPerBatch: Number(uintField(values[8], op, 'max_blocks_per_batch')),
-    mediaType: textField(values[9], op, 'media_type')
+    mediaType: textField(values[9], op, 'media_type'),
+    tailPriceSatoshis: uintField(values[10], op, 'tail_price_satoshis')
   }
   validateFileQuoteTerms(terms)
   if (!equalBytes(encodeFileQuoteTerms(terms), raw)) throw new WireError('non_canonical', 1, 'file_quote_terms_cbor', '报价条款不是确定性编码')
@@ -314,9 +316,9 @@ export function checkContentRequestTiming (authorization: PaymentAuthorization, 
 
 /**
  * 验证交付批次：数量严格等于授权哈希数量、顺序一一对应、逐项 SHA-256、
- * seed/block 归属与协议期望长度。批次内携带与报价 SeedHash 对应的 seed
- * payload 时先完整验证它，再复用它做块成员校验；返回实际用于成员校验的
- * seed 深拷贝（无 seed 批次返回 undefined）。
+ * seed 哈希与块归属全部依据 Seed 字节本身，绝不使用报价声明的文件长度。
+ * 批次内携带与报价 SeedHash 对应的 seed payload 时先完整验证它，再复用它做
+ * 块成员校验；返回实际用于成员校验的 seed 深拷贝（无 seed 批次返回 undefined）。
  */
 export async function verifyContentPayloads (terms: FileQuoteTerms, contentHashes: readonly Uint8Array[], payloads: readonly Uint8Array[], seed?: Uint8Array): Promise<Uint8Array | undefined> {
   const op = 'content.VerifyContentPayloads'
@@ -335,7 +337,7 @@ export async function verifyContentPayloads (terms: FileQuoteTerms, contentHashe
     if (!equalBytes(sha256(payload), hash)) throw invalid(op, `payload[${index}]`, `payload #${index + 1} 与授权内容哈希不一致`)
     if (equalBytes(hash, terms.seedHash)) {
       try {
-        await verifySeedForSourceSize([payload], Digest.fromBytes(hash), terms.fileSizeBytes)
+        await verifySeed([payload], Digest.fromBytes(hash))
       } catch (error) { throw mapMasterSeedError(error, op) }
       seedItemIndex = index
     } else {
@@ -348,12 +350,15 @@ export async function verifyContentPayloads (terms: FileQuoteTerms, contentHashe
   if (requiresBlocks && effectiveSeed == null) throw invalid(op, 'seed', '验证块 payload 需要已验证 seed')
   if (requiresBlocks) {
     const seedDigest = Digest.fromBytes(terms.seedHash)
+    try {
+      await verifySeed([effectiveSeed!], seedDigest)
+    } catch (error) { throw mapMasterSeedError(error, op) }
     for (let index = 0; index < contentHashes.length; index++) {
       const hash = contentHashes[index]!
       if (equalBytes(hash, terms.seedHash)) continue
       try {
         verifyBlock(payloads[index]!, Digest.fromBytes(hash))
-        await verifyBlockInSeed([effectiveSeed!], seedDigest, terms.fileSizeBytes, payloads[index]!)
+        await findSeedMatches(effectiveSeed!, seedDigest, Digest.fromBytes(hash))
       } catch (error) { throw mapMasterSeedError(error, op) }
     }
   }
@@ -361,9 +366,9 @@ export async function verifyContentPayloads (terms: FileQuoteTerms, contentHashe
 }
 
 /**
- * 把一个有序内容哈希批次映射为 seed 或已知协议期望长度的块：seed 条目直接按
- * SeedHash 判定；其余哈希必须在已验证 seed 的块列表中找到，同一哈希命中的
- * 位置不得给出冲突长度。纯证据函数，不读取发送方元数据。
+ * 把一个有序内容哈希批次映射为 seed、末项块或普通块：seed 条目直接按
+ * SeedHash 判定；其余哈希必须在已验证 seed 的块列表中找到，末项命中即尾块。
+ * 纯证据函数，不读取发送方元数据，不使用报价长度。
  */
 export async function classifyContentHashes (terms: FileQuoteTerms, contentHashes: readonly Uint8Array[], seed?: Uint8Array): Promise<ClassifiedContent[]> {
   const op = 'content.ClassifyContentHashes'
@@ -372,10 +377,9 @@ export async function classifyContentHashes (terms: FileQuoteTerms, contentHashe
 }
 
 /**
- * 按已验证报价与 seed 推导批次总价：seed 按 SeedPriceSatoshis；完整块按
- * FullBlockPriceSatoshis；末块按比例进位并享受 10% 卖方让利（整块价为 0 时
- * 末块为 0）；重复块位置只计一次；冲突长度整体拒绝；总额溢出 uint64 返回
- * insufficient_balance。
+ * 按已验证报价与 seed 推导批次总价：seed 按 SeedPriceSatoshis；末项块按报价
+ * TailPriceSatoshis；其余块按 FullBlockPriceSatoshis；重复块位置只计一次；
+ * 总额溢出 uint64 返回 insufficient_balance。买方直接采用报价尾价，不推导长度。
  */
 export async function contentHashesPriceSatoshis (terms: FileQuoteTerms, contentHashes: readonly Uint8Array[], seed?: Uint8Array): Promise<bigint> {
   const op = 'content.ContentHashesPriceSatoshis'
@@ -385,7 +389,7 @@ export async function contentHashesPriceSatoshis (terms: FileQuoteTerms, content
   for (const item of items) {
     let price: bigint
     if (item.isSeed) price = terms.seedPriceSatoshis
-    else price = blockPriceSatoshis(terms.fullBlockPriceSatoshis, item.blockSize)
+    else price = item.isTail ? terms.tailPriceSatoshis : terms.fullBlockPriceSatoshis
     if (total > MAX_UINT64 - price) throw new WireError('insufficient_balance', 0, 'aggregate_price_satoshis', '聚合内容价格溢出 uint64')
     total += price
   }
@@ -397,30 +401,48 @@ async function classifyContent (op: string, terms: FileQuoteTerms, contentHashes
     if (error instanceof WireError) throw new WireError(error.code, error.kind, error.field, `报价条款: ${error.message}`)
     throw error
   }
+  const seedDigest = Digest.fromBytes(terms.seedHash)
+  if (seed.byteLength > 0) {
+    try {
+      await verifySeed([seed], seedDigest)
+    } catch (error) { throw mapMasterSeedError(error, op) }
+  }
   const result: ClassifiedContent[] = []
   for (let index = 0; index < contentHashes.length; index++) {
     const hash = contentHashes[index]!
     if (hash.byteLength !== CONTENT_DIGEST_SIZE) throw invalid(op, 'content_hash', `内容哈希 #${index + 1} 必须是 32 bytes`)
-    if (equalBytes(hash, terms.seedHash)) { result.push({ isSeed: true, blockSize: 0n }); continue }
+    if (equalBytes(hash, terms.seedHash)) { result.push({ isSeed: true, isTail: false }); continue }
     if (seed.byteLength === 0) throw invalid(op, 'seed', '块内容需要已验证 seed')
-    let matches: Awaited<ReturnType<typeof findBlockHash>>
+    let matches: Awaited<ReturnType<typeof findSeedMatches>>
     try {
-      matches = await findBlockHash([seed], Digest.fromBytes(terms.seedHash), terms.fileSizeBytes, Digest.fromBytes(hash))
+      matches = await findSeedMatches(seed, seedDigest, Digest.fromBytes(hash))
     } catch (error) { throw mapMasterSeedError(error, op, `内容哈希 #${index + 1}`) }
-    if (matches.matchCount === 0n) throw invalid(op, 'content_hash', `内容哈希 #${index + 1} 不在已验证 seed 的块列表中`)
-    let firstSize: bigint
-    let lastSize: bigint
-    try {
-      firstSize = expectedBlockSize(terms.fileSizeBytes, matches.firstIndex)
-      lastSize = expectedBlockSize(terms.fileSizeBytes, matches.lastIndex)
-    } catch (error) { throw mapMasterSeedError(error, op) }
-    if (firstSize !== lastSize) throw invalid(op, 'content_hash', `内容哈希 #${index + 1} 命中的位置长度不一致`)
-    result.push({ isSeed: false, blockSize: firstSize })
+    result.push({ isSeed: false, isTail: matches.isTail })
   }
   return result
 }
 
-/** 报价条款到单块费用的协议事实；完整块原价，尾块按长度向上取整并让利10%。 */
+async function findSeedMatches (seed: Uint8Array, seedDigest: Digest, blockDigest: Digest): Promise<{ matchCount: bigint, isTail: boolean }> {
+  if (seed.byteLength === 0) throw invalid('content.findSeedMatches', 'seed', '块内容需要已验证 seed')
+  await verifySeed([seed], seedDigest)
+  if (seed.byteLength % CONTENT_DIGEST_SIZE !== 0) throw invalid('content.findSeedMatches', 'seed', `seed 长度 ${seed.byteLength} 不是 32 的倍数`)
+  const randomAccess = { readAt: async (offset: bigint, length: number): Promise<Uint8Array> => seed.slice(Number(offset), Number(offset) + length) }
+  const blockCount = BigInt(seed.byteLength / CONTENT_DIGEST_SIZE)
+  let matchCount = 0n
+  let isTail = false
+  for (let position = 0n; position < blockCount; position++) {
+    const candidate = await readBlockHash(randomAccess, BigInt(seed.byteLength), position)
+    if (!candidate.equals(blockDigest)) continue
+    matchCount++
+    if (position === blockCount - 1n) isTail = true
+  }
+  if (matchCount === 0n) {
+    throw new MasterSeedError('BLOCK_NOT_IN_SEED', 'block hash is not listed by the verified seed')
+  }
+  return { matchCount, isTail }
+}
+
+/** 卖方侧单块费用公式；完整块原价，尾块按长度向上取整并让利10%。买方直接采用报价尾价，不调用本函数。 */
 export function blockPriceSatoshis (fullBlockPriceSatoshis: bigint, blockSize: bigint): bigint {
   if (blockSize === 0n || blockSize > CONTENT_BLOCK_SIZE) throw invalid('content.blockPriceSatoshis', 'block_size', `块长度 ${blockSize} 无效`)
   if (blockSize === CONTENT_BLOCK_SIZE) return fullBlockPriceSatoshis
@@ -431,6 +453,14 @@ export function blockPriceSatoshis (fullBlockPriceSatoshis: bigint, blockSize: b
   if (price === 0n) price = 1n
   if (price > MAX_UINT64) throw new WireError('insufficient_balance', 0, 'aggregate_price_satoshis', '内容价格溢出 uint64')
   return price
+}
+
+/** 卖方按本地文件计算报价尾价（公式不变）；空文件与整块尾按完整块价报价。买方永不调用。 */
+export function sellerTailPriceSatoshis (fullBlockPriceSatoshis: bigint, fileSizeBytes: bigint): bigint {
+  const blockCount = blockCountForSourceSize(fileSizeBytes)
+  if (blockCount === 0n) return fullBlockPriceSatoshis
+  const tailSize = expectedBlockSize(fileSizeBytes, blockCount - 1n)
+  return blockPriceSatoshis(fullBlockPriceSatoshis, tailSize)
 }
 
 function newVerifiedQuote (quote: SignedFileQuote, terms: FileQuoteTerms, termsID: Uint8Array): VerifiedQuote {
@@ -468,7 +498,8 @@ function encodeTerms (terms: FileQuoteTerms): Uint8Array {
   return encodeCanonical([
     copyBytes(terms.seedHash), copyBytes(terms.buyerPublicKey), terms.seedPriceSatoshis,
     terms.fullBlockPriceSatoshis, terms.fileSizeBytes, terms.quoteExpiresAtUnixSeconds,
-    encodeArbiterKeys(terms.supportedArbiterPublicKeys), terms.recommendedFilename, BigInt(terms.maxBlocksPerBatch), terms.mediaType
+    encodeArbiterKeys(terms.supportedArbiterPublicKeys), terms.recommendedFilename, BigInt(terms.maxBlocksPerBatch), terms.mediaType,
+    terms.tailPriceSatoshis
   ])
 }
 function encodeAuthorization (authorization: PaymentAuthorization): Uint8Array {
@@ -534,7 +565,6 @@ function requireNow (nowUnixSeconds: bigint): bigint {
   if (typeof nowUnixSeconds !== 'bigint') throw invalid('protocol.Facts.RequireNow', 'facts.now', '本操作需要显式 facts.now')
   return nowUnixSeconds
 }
-function emptySeedHash (): Uint8Array { return sha256(new Uint8Array()) }
 function mapMasterSeedError (error: unknown, op: string, context?: string): WireError {
   const prefix = context == null ? op : context
   if (isMasterSeedError(error)) {

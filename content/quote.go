@@ -85,13 +85,14 @@ func EncodeFileQuoteTerms(terms *FileQuoteTerms) ([]byte, error) {
 		terms.RecommendedFilename,
 		terms.MaxBlocksPerBatch,
 		terms.MediaType,
+		terms.TailPriceSatoshis,
 	})
 }
 
 // DecodeFileQuoteTerms validates and decodes canonical FileQuoteTerms bytes.
 func DecodeFileQuoteTerms(data []byte) (*FileQuoteTerms, error) {
 	const op = "content.DecodeFileQuoteTerms"
-	values, err := decodeArray(data, 10)
+	values, err := decodeArray(data, 11)
 	if err != nil {
 		return nil, malformed(op, "file_quote_terms_cbor", err)
 	}
@@ -125,6 +126,9 @@ func DecodeFileQuoteTerms(data []byte) (*FileQuoteTerms, error) {
 	}
 	if err := decode(values[9], &terms.MediaType); err != nil {
 		return nil, malformed(op, "media_type", err)
+	}
+	if err := decode(values[10], &terms.TailPriceSatoshis); err != nil {
+		return nil, malformed(op, "tail_price_satoshis", err)
 	}
 	if err := ValidateFileQuoteTerms(terms); err != nil {
 		return nil, invalidEvidence(op, err)
@@ -303,6 +307,10 @@ func DecodeSignedFileQuote(data []byte) (*SignedFileQuote, error) {
 // seller signature. The recommended filename must already satisfy the single
 // sanitize rule: sellers sanitize before encoding and signing, buyers only
 // verify that the received field obeys the same rule and never rewrite it.
+// FileSizeBytes is a seller-declared display hint only: it is range-checked
+// as uint64 but never decides membership, pricing, or completion, and an
+// unknown size is expressed as 0 without claiming a verified empty file.
+// Emptiness is determined by the verified seed, never by this field.
 // 所有导出失败分支都返回结构化 invalid_evidence/malformed_wire 分类错误，
 // 调用方可用 protocol.CodeOf 稳定分支。
 func ValidateFileQuoteTerms(terms *FileQuoteTerms) error {
@@ -319,12 +327,7 @@ func ValidateFileQuoteTerms(terms *FileQuoteTerms) error {
 	if err := protocol.ValidateCompressedPubKey(terms.BuyerPublicKey); err != nil {
 		return protocol.Wrap(fmt.Errorf("quote buyer_public_key: %v", err), op, protocol.CodeInvalidEvidence, 1, "buyer_public_key")
 	}
-	if terms.FileSizeBytes == 0 {
-		emptySeedHash := masterseed.Sum256(nil)
-		if !bytes.Equal(terms.SeedHash, emptySeedHash.Bytes()) {
-			return protocol.Errorf(op, protocol.CodeInvalidEvidence, 1, "seed_hash", "empty-file quote seed_hash must equal sha256 of empty seed")
-		}
-	}
+	// FileSizeBytes 不参与内容判定：空文件与否由已验证 Seed 确定。
 	if len(terms.MediaType) > 255 || !quoteMediaTypePattern.MatchString(terms.MediaType) {
 		return protocol.Errorf(op, protocol.CodeInvalidEvidence, 1, "media_type", "需要不超过 255 字节的规范小写 MIME type/subtype")
 	}
@@ -334,9 +337,7 @@ func ValidateFileQuoteTerms(terms *FileQuoteTerms) error {
 	if terms.QuoteExpiresAtUnixSeconds <= 0 {
 		return protocol.Errorf(op, protocol.CodeInvalidEvidence, 1, "quote_expires_at_unix_seconds", "is required")
 	}
-	if fileQuoteBlockCount(terms.FileSizeBytes) > MaxQuoteSeedBlocks {
-		return protocol.Errorf(op, protocol.CodeInvalidEvidence, 1, "file_size_bytes", "exceeds maximum %d", MaxQuoteFileSize)
-	}
+	// 资源耗尽保护施加在实际 Seed、实际块与消息大小上，不依赖卖家声明长度。
 	if _, err := DecodeSupportedArbiterPublicKeys(terms.SupportedArbiterPublicKeysCBOR); err != nil {
 		return err
 	}
@@ -368,13 +369,13 @@ func SanitizeRecommendedFilename(name string) string {
 
 // ContentHashesPriceSatoshis derives the aggregate buyer-signed amount for an
 // ordered batch of content hashes against the verified quote. Each hash equal
-// to the quote SeedHash is priced at SeedPriceSatoshis; every other hash must
-// be found in the verified seed and is priced at its position's protocol
-// expected length (full blocks at FullBlockPriceSatoshis, tail blocks with the
-// proportional round-up and the specified 10% seller allowance). Duplicate
-// block positions behind one hash are charged once; matches with conflicting
-// expected lengths reject the batch. The total is accumulated with checked
-// addition so any overflow fails before signing instead of wrapping.
+// to the quote SeedHash is priced at SeedPriceSatoshis; the hash matching the
+// seed's last position is priced at the quoted TailPriceSatoshis; every other
+// listed hash is priced at FullBlockPriceSatoshis. Membership and tail position
+// come from the verified seed only, never from the quoted file size. Duplicate
+// block positions behind one hash are charged once. The total is accumulated
+// with checked addition so any overflow fails before signing instead of
+// wrapping.
 func ContentHashesPriceSatoshis(ctx context.Context, terms *FileQuoteTerms, contentHashes [][]byte, seed []byte) (uint64, error) {
 	if ctx == nil {
 		return 0, protocol.Errorf("content.ContentHashesPriceSatoshis", protocol.CodeCanceled, 0, "ctx", "a non-nil context is required for seed scanning")
@@ -393,9 +394,9 @@ func ContentHashesPriceSatoshis(ctx context.Context, terms *FileQuoteTerms, cont
 	for _, item := range items {
 		price := terms.SeedPriceSatoshis
 		if !item.IsSeed {
-			price, err = BlockPriceSatoshis(terms.FullBlockPriceSatoshis, item.BlockSize)
-			if err != nil {
-				return 0, err
+			price = terms.FullBlockPriceSatoshis
+			if item.IsTail {
+				price = terms.TailPriceSatoshis
 			}
 		}
 		if total > ^uint64(0)-price {
@@ -406,11 +407,12 @@ func ContentHashesPriceSatoshis(ctx context.Context, terms *FileQuoteTerms, cont
 	return total, nil
 }
 
-// BlockPriceSatoshis prices one block by its protocol expected length using
-// big integers so malformed uint64 prices cannot overflow into a lower amount.
-// A tail block (blockSize < 256 KiB) receives the protocol's 10% seller
-// concession; hosts projecting quote terms into their own schedulers must use
-// exactly this price or payment reconciliation will disagree.
+// BlockPriceSatoshis prices one seller-side block by its local expected length
+// using big integers so malformed uint64 prices cannot overflow into a lower
+// amount. A tail block (blockSize < 256 KiB) receives the protocol's 10%
+// seller concession. Only the seller uses this formula to compute the quoted
+// TailPriceSatoshis from its own file; buyers and verifiers use the quoted
+// tail price directly and never derive it from the quoted file size.
 func BlockPriceSatoshis(fullBlockPriceSatoshis, blockSize uint64) (uint64, error) {
 	if blockSize == 0 || blockSize > BlockSize {
 		return 0, fmt.Errorf("invalid block expected size %d", blockSize)
@@ -437,8 +439,20 @@ func BlockPriceSatoshis(fullBlockPriceSatoshis, blockSize uint64) (uint64, error
 	return price.Uint64(), nil
 }
 
-func fileQuoteBlockCount(fileSizeBytes uint64) uint64 {
-	return masterseed.BlockCountForSourceSize(fileSizeBytes)
+// SellerTailPriceSatoshis computes the quoted tail price from the seller's own
+// local file size using the unchanged BlockPriceSatoshis formula. Empty files
+// and full-size tails quote the full block price; the value is advisory output
+// only and never re-derived by buyers.
+func SellerTailPriceSatoshis(fullBlockPriceSatoshis, fileSizeBytes uint64) (uint64, error) {
+	blockCount := masterseed.BlockCountForSourceSize(fileSizeBytes)
+	if blockCount == 0 {
+		return fullBlockPriceSatoshis, nil
+	}
+	tailSize, err := masterseed.ExpectedBlockSize(fileSizeBytes, blockCount-1)
+	if err != nil {
+		return 0, err
+	}
+	return BlockPriceSatoshis(fullBlockPriceSatoshis, tailSize)
 }
 
 func validateSupportedArbiterPublicKeys(publicKeys [][]byte) error {

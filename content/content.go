@@ -591,10 +591,10 @@ func mapMasterSeedError(err error) error {
 }
 
 // VerifyContentPayloads 验证交付批次：数量严格等于授权哈希数量、顺序
-// 一一对应、逐项 SHA-256、seed/block 归属与协议期望长度。当批次内携带与报价
-// SeedHash 对应的 seed payload 时，先完整验证它，再用它做块成员校验；返回值
-// 是实际用于成员校验的 seed 深复制，调用方可用它继续计算聚合价格。ctx 仅用
-// 于可取消的大 payload 计算。
+// 一一对应、逐项 SHA-256、seed 哈希与块归属全部依据 Seed 字节本身，绝不使用
+// 报价声明的文件长度。当批次内携带与报价 SeedHash 对应的 seed payload 时，先
+// 完整验证它，再用它做块成员校验；返回值是实际用于成员校验的 seed 深复制，
+// 调用方可用它继续计算聚合价格。ctx 仅用于可取消的大 payload 计算。
 func VerifyContentPayloads(ctx context.Context, quoteTerms *FileQuoteTerms, contentHashes, payloads [][]byte, seed []byte) ([]byte, error) {
 	const op = "content.VerifyContentPayloads"
 	// 导出入口自身 fail-closed：外部直接调用时同样强制协议数组约束
@@ -628,7 +628,7 @@ func VerifyContentPayloads(ctx context.Context, quoteTerms *FileQuoteTerms, cont
 			return nil, invalidEvidence(op, fmt.Errorf("payload #%d does not match authorized content hash", index+1))
 		}
 		if bytes.Equal(hash, quoteTerms.SeedHash) {
-			if _, err := masterseed.VerifySeedForSourceSize(ctx, bytes.NewReader(payloads[index]), digest, quoteTerms.FileSizeBytes); err != nil {
+			if _, err := masterseed.VerifySeed(ctx, bytes.NewReader(payloads[index]), digest); err != nil {
 				return nil, mapMasterSeedError(err)
 			}
 			seedItemIndex = index
@@ -648,6 +648,9 @@ func VerifyContentPayloads(ctx context.Context, quoteTerms *FileQuoteTerms, cont
 		if err != nil {
 			return nil, mapMasterSeedError(err)
 		}
+		if _, err := masterseed.VerifySeed(ctx, bytes.NewReader(effectiveSeed), seedDigest); err != nil {
+			return nil, mapMasterSeedError(err)
+		}
 		for index, hash := range contentHashes {
 			if bytes.Equal(hash, quoteTerms.SeedHash) {
 				continue
@@ -655,9 +658,13 @@ func VerifyContentPayloads(ctx context.Context, quoteTerms *FileQuoteTerms, cont
 			if _, err := masterseed.VerifyBlock(ctx, payloads[index], digests[index]); err != nil {
 				return nil, mapMasterSeedError(err)
 			}
-			if _, err := masterseed.VerifyBlockInSeed(ctx, bytes.NewReader(effectiveSeed), seedDigest, quoteTerms.FileSizeBytes, payloads[index]); err != nil {
-				return nil, mapMasterSeedError(err)
+			if _, err := findSeedMatches(ctx, effectiveSeed, seedDigest, digests[index]); err != nil {
+				if masterseed.CodeOf(err) != "" {
+					return nil, mapMasterSeedError(err)
+				}
+				return nil, err
 			}
+			_ = hash
 		}
 	}
 	if len(effectiveSeed) == 0 {
@@ -666,19 +673,20 @@ func VerifyContentPayloads(ctx context.Context, quoteTerms *FileQuoteTerms, cont
 	return append([]byte(nil), effectiveSeed...), nil
 }
 
-// ClassifiedContent 是一个内容哈希的证据派生分类：类型与计价所需长度永远
-// 来自报价与已验证 seed，绝不来自发送方声明，也不读取发送方提供的任何元数据。
+// ClassifiedContent 是一个内容哈希的证据派生分类：seed 判定与末项判定永远
+// 来自报价 SeedHash 与已验证 seed，绝不来自发送方声明、报价长度或任何元数据。
 type ClassifiedContent struct {
-	// IsSeed 报告该哈希是否等于报价 SeedHash（按整份 seed 计价，无 BlockSize）。
+	// IsSeed 报告该哈希是否等于报价 SeedHash（按整份 seed 计价）。
 	IsSeed bool
-	// BlockSize 是该块在 seed 中的协议期望长度（字节，1..262144）；
-	// IsSeed 为 true 时恒为 0。
-	BlockSize uint64
+	// IsTail 报告该哈希是否命中 seed 的末项位置；命中末项（含重复命中）时按
+	// 报价 TailPriceSatoshis 计价，否则按 FullBlockPriceSatoshis 计价。
+	// IsSeed 为 true 时恒为 false。
+	IsTail bool
 }
 
-// ClassifyContentHashes 导出分类入口：把有序内容哈希逐项映射为 seed 或
-// 已知协议期望长度的块。seed 条目直接按 SeedHash 判定；其余哈希必须能在
-// 已验证 seed 的块列表中找到，且同一哈希命中的位置不得给出冲突长度。
+// ClassifyContentHashes 导出分类入口：把有序内容哈希逐项映射为 seed、末项块
+// 或普通块。seed 条目直接按 SeedHash 判定；其余哈希必须能在已验证 seed 的块
+// 列表中找到，末项命中即尾块。
 // 它是纯证据函数，调用方可用它独立复算内容类型而不需要价格策略。
 func ClassifyContentHashes(ctx context.Context, terms *FileQuoteTerms, contentHashes [][]byte, seed []byte) ([]ClassifiedContent, error) {
 	if ctx == nil {
@@ -694,27 +702,41 @@ func ClassifyContentHashes(ctx context.Context, terms *FileQuoteTerms, contentHa
 	}
 	result := make([]ClassifiedContent, len(items))
 	for index, item := range items {
-		result[index] = ClassifiedContent{IsSeed: item.IsSeed, BlockSize: item.BlockSize}
+		result[index] = ClassifiedContent{IsSeed: item.IsSeed, IsTail: item.IsTail}
 	}
 	return result, nil
 }
 
-// classifiedContent records the evidence-derived kind and expected protocol
-// length of one requested content hash. The kind is never sender-declared.
+// classifiedContent records the evidence-derived kind of one requested content
+// hash. The kind is never sender-declared and never derived from lengths.
 type classifiedContent struct {
-	IsSeed    bool
-	BlockSize uint64
+	IsSeed bool
+	IsTail bool
 }
 
-// classifyContentHashes derives the kind and price-relevant expected length of
-// each ordered content hash from the quote and the verified seed. A hash equal
-// to the quote SeedHash is the seed; every other hash must appear in the seed's
-// block list, priced at that position's protocol length. Duplicate positions
-// are charged once, but matches implying conflicting expected lengths are an
-// ambiguous-evidence conflict and reject the whole batch.
+// seedMatches records Seed-only membership of one block hash.
+type seedMatches struct {
+	MatchCount uint64
+	IsTail     bool
+}
+
+// classifyContentHashes derives the kind of each ordered content hash from the
+// quote SeedHash and the verified seed. A hash equal to the quote SeedHash is
+// the seed; every other hash must appear in the seed's block list, priced at
+// the quoted tail price when it matches the last position. Duplicate positions
+// are charged once; lengths are never consulted.
 func classifyContentHashes(ctx context.Context, quoteTerms *FileQuoteTerms, contentHashes [][]byte, seed []byte) ([]classifiedContent, error) {
 	if err := ValidateFileQuoteTerms(quoteTerms); err != nil {
 		return nil, invalidEvidence("content.classifyContentHashes", fmt.Errorf("quote terms: %v", err))
+	}
+	seedDigest, err := masterseed.DigestFromBytes(quoteTerms.SeedHash)
+	if err != nil {
+		return nil, mapMasterSeedError(err)
+	}
+	if len(seed) > 0 {
+		if _, err := masterseed.VerifySeed(ctx, bytes.NewReader(seed), seedDigest); err != nil {
+			return nil, mapMasterSeedError(err)
+		}
 	}
 	result := make([]classifiedContent, len(contentHashes))
 	for index, hash := range contentHashes {
@@ -725,31 +747,64 @@ func classifyContentHashes(ctx context.Context, quoteTerms *FileQuoteTerms, cont
 			result[index] = classifiedContent{IsSeed: true}
 			continue
 		}
-		matches, err := findBlockMatches(ctx, quoteTerms, hash, seed)
+		digest, err := masterseed.DigestFromBytes(hash)
 		if err != nil {
+			return nil, mapMasterSeedError(err)
+		}
+		matches, err := findSeedMatches(ctx, seed, seedDigest, digest)
+		if err != nil {
+			if masterseed.CodeOf(err) != "" {
+				return nil, fmt.Errorf("content hash #%d: %w", index+1, mapMasterSeedError(err))
+			}
 			return nil, fmt.Errorf("content hash #%d: %w", index+1, err)
 		}
-		firstSize, err := masterseed.ExpectedBlockSize(quoteTerms.FileSizeBytes, matches.FirstIndex)
+		result[index] = classifiedContent{IsTail: matches.IsTail}
+	}
+	return result, nil
+}
+
+// findSeedMatches locates one block hash in the verified seed without using
+// any declared length. It verifies the seed hash, scans every digest position,
+// and reports membership plus whether the last position matches.
+func findSeedMatches(ctx context.Context, seed []byte, seedDigest, blockDigest masterseed.Digest) (seedMatches, error) {
+	var result seedMatches
+	if len(seed) == 0 {
+		return result, invalidEvidence("content.findSeedMatches", errors.New("the verified seed is required for block content"))
+	}
+	if _, err := masterseed.VerifySeed(ctx, bytes.NewReader(seed), seedDigest); err != nil {
+		return result, mapMasterSeedError(err)
+	}
+	if uint64(len(seed))%uint64(masterseed.DigestSize) != 0 {
+		return result, mapMasterSeedError(fmt.Errorf("seed size %d is not a multiple of %d", len(seed), masterseed.DigestSize))
+	}
+	blockCount := uint64(len(seed)) / uint64(masterseed.DigestSize)
+	for position := uint64(0); position < blockCount; position++ {
+		if err := ctx.Err(); err != nil {
+			return result, &masterseed.Error{Code: masterseed.Aborted, Cause: err, Message: err.Error()}
+		}
+		candidate, err := masterseed.ReadBlockHash(ctx, bytes.NewReader(seed), uint64(len(seed)), position)
 		if err != nil {
-			return nil, mapMasterSeedError(err)
+			return result, mapMasterSeedError(err)
 		}
-		lastSize, err := masterseed.ExpectedBlockSize(quoteTerms.FileSizeBytes, matches.LastIndex)
-		if err != nil {
-			return nil, mapMasterSeedError(err)
+		if !bytes.Equal(candidate.Bytes(), blockDigest.Bytes()) {
+			continue
 		}
-		if firstSize != lastSize {
-			return nil, invalidEvidence("content.classifyContentHashes", fmt.Errorf("content hash #%d matches positions with conflicting expected lengths", index+1))
+		result.MatchCount++
+		if position == blockCount-1 {
+			result.IsTail = true
 		}
-		result[index] = classifiedContent{BlockSize: firstSize}
+	}
+	if result.MatchCount == 0 {
+		return result, &masterseed.Error{Code: masterseed.BlockNotInSeed, Message: "block hash is not listed by the verified seed"}
 	}
 	return result, nil
 }
 
 // findBlockMatches locates all seed positions of one block hash. It scans the
-// full seed so integrity, source-size binding, and membership are proven in a
-// single pass before any pricing or delivery decision.
-func findBlockMatches(ctx context.Context, quoteTerms *FileQuoteTerms, blockHash, seed []byte) (masterseed.BlockMatches, error) {
-	var result masterseed.BlockMatches
+// full seed so integrity and membership are proven in a single pass before any
+// pricing or delivery decision. Lengths are never consulted.
+func findBlockMatches(ctx context.Context, quoteTerms *FileQuoteTerms, blockHash, seed []byte) (seedMatches, error) {
+	var result seedMatches
 	if len(seed) == 0 {
 		return result, invalidEvidence("content.findBlockMatches", errors.New("the verified seed is required for block content"))
 	}
@@ -761,12 +816,12 @@ func findBlockMatches(ctx context.Context, quoteTerms *FileQuoteTerms, blockHash
 	if err != nil {
 		return result, mapMasterSeedError(err)
 	}
-	result, err = masterseed.FindBlockHash(ctx, bytes.NewReader(seed), seedDigest, quoteTerms.FileSizeBytes, digest)
+	result, err = findSeedMatches(ctx, seed, seedDigest, digest)
 	if err != nil {
-		return result, mapMasterSeedError(err)
-	}
-	if result.MatchCount == 0 {
-		return result, invalidEvidence("content.findBlockMatches", errors.New("block hash is not listed by the verified seed"))
+		if masterseed.CodeOf(err) != "" {
+			return result, mapMasterSeedError(err)
+		}
+		return result, err
 	}
 	return result, nil
 }

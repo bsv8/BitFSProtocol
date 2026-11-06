@@ -73,9 +73,10 @@ function validateOuter (kind: WireKind, value: CBORValue[]): void {
 }
 
 function validateQuote (raw: Uint8Array): void {
-  const value = child(raw, 1, 'file_quote_terms_cbor', 10)
+  const value = child(raw, 1, 'file_quote_terms_cbor', 11)
   hash(value[0], 1, 'seed_hash'); pubkey(value[1], 1, 'buyer_public_key')
   uint(value[2], 1, 'seed_price_satoshis'); uint(value[3], 1, 'full_block_price_satoshis'); const fileSize = uint(value[4], 1, 'file_size_bytes'); const expiry = integer(value[5], 1, 'quote_expires_at')
+  uint(value[10], 1, 'tail_price_satoshis')
   if (fileSize > 8192n * 262144n) malformed(1, 'file_size_bytes', '文件大小超过单个 seed 可描述的上限')
   if (fileSize === 0n && !equal(value[0] as Uint8Array, sha256(new Uint8Array()))) malformed(1, 'seed_hash', '空文件的 seed_hash 必须是空 seed 的 SHA-256')
   if (expiry <= 0n) malformed(1, 'quote_expires_at', '报价失效时间必须为正 Unix 秒')

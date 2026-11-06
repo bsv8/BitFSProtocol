@@ -29,7 +29,7 @@ SellerSignature -> content_delivery_cbor   (SignWireDocument(1, 6, ...))
 ContentPayloadsCBOR[i] -> SHA-256 -> ContentHashesCBOR[i]
 ```
 
-Because payloads are not directly signed, acceptance MUST verify every item: count strictly equal to the hash count, order preserved, per-item SHA-256 equal to the committed hash, seed/block membership, protocol expected lengths, and the recomputed aggregate price against the absolute cumulative amount. Any single failure rejects the whole batch — no partial payment, no zero-priced missing items, no prefix acceptance.
+Because payloads are not directly signed, acceptance MUST verify every item: count strictly equal to the hash count, order preserved, per-item SHA-256 equal to the committed hash, seed hash, Seed-only block membership, and the recomputed quoted aggregate price against the absolute cumulative amount. Any single failure rejects the whole batch — no partial payment, no zero-priced missing items, no prefix acceptance.
 
 The seller signs the exact `content_delivery_cbor` through the unified `SignWireDocument(1, 6, ...)` helper (one internal SHA-256 over the typed signing input, low-S DER); the typed input authenticates version and kind together with the exact document. Signatures over a bare hash, hex text, payloads, or pre-hashed digests are not this protocol.
 

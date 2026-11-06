@@ -54,13 +54,18 @@ func mustBatchQuote(t *testing.T) *SignedFileQuote {
 }
 
 // mustSeededQuote 建立一条绑定真实 seed 的报价：source 的长度与 seed hash 都
-// 写进报价条款，返回报价、seed 和条款。
+// 写进报价条款，尾价按卖方公式计算，返回报价、seed 和条款。
 func mustSeededQuote(t *testing.T, source []byte) (*SignedFileQuote, []byte, *FileQuoteTerms) {
 	t.Helper()
 	seed := createTestSeed(t, source)
 	terms := quoteTestTerms(t)
 	terms.FileSizeBytes = uint64(len(source))
 	terms.SeedHash = masterseed.Sum256(seed).Bytes()
+	tail, err := SellerTailPriceSatoshis(terms.FullBlockPriceSatoshis, terms.FileSizeBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terms.TailPriceSatoshis = tail
 	quote, err := NewSignedFileQuote(context.Background(), terms, constructorSigner(t, quoteTestKey()))
 	if err != nil {
 		t.Fatal(err)
@@ -448,6 +453,11 @@ func TestContentHashesPriceSatAggregation(t *testing.T) {
 	terms.SeedHash = masterseed.Sum256(seed).Bytes()
 	terms.SeedPriceSatoshis = 100
 	terms.FullBlockPriceSatoshis = 1000
+	tailQuoted, err := SellerTailPriceSatoshis(terms.FullBlockPriceSatoshis, terms.FileSizeBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terms.TailPriceSatoshis = tailQuoted
 
 	seedOnly := [][]byte{masterseed.Sum256(seed).Bytes()}
 	price, err := ContentHashesPriceSatoshis(context.Background(), terms, seedOnly, nil)
@@ -476,6 +486,7 @@ func TestContentHashesPriceSatAggregation(t *testing.T) {
 	zeroSeed := createTestSeed(t, zeroSource)
 	zeroPrice.FileSizeBytes = masterseed.BlockSize
 	zeroPrice.SeedHash = masterseed.Sum256(zeroSeed).Bytes()
+	zeroPrice.TailPriceSatoshis = 0
 	price, err = ContentHashesPriceSatoshis(context.Background(), zeroPrice, [][]byte{masterseed.Sum256(zeroSource).Bytes()}, zeroSeed)
 	if err != nil || price != 0 {
 		t.Fatalf("zero-price tail = %d, %v", price, err)
@@ -490,6 +501,7 @@ func TestContentHashesPriceSatAggregation(t *testing.T) {
 	overflow.FullBlockPriceSatoshis = ^uint64(0)
 	overflow.FileSizeBytes = 2 * masterseed.BlockSize
 	overflow.SeedHash = masterseed.Sum256(overflowSeed).Bytes()
+	overflow.TailPriceSatoshis = ^uint64(0)
 	_, err = ContentHashesPriceSatoshis(context.Background(), overflow, [][]byte{
 		masterseed.Sum256(firstOverflowBlock).Bytes(),
 		masterseed.Sum256(secondOverflowBlock).Bytes(),
@@ -544,31 +556,77 @@ func TestExportedBatchEntriesFailClosedOnNonProtocolInput(t *testing.T) {
 	}
 }
 
-func TestDuplicateHashPositionsArePricedOnceAndConflictsRejected(t *testing.T) {
+func TestDuplicateHashPositionsArePricedOnceWithTailRule(t *testing.T) {
 	duplicate := masterseed.Sum256([]byte("duplicate")).Bytes()
-	seed := bytes.Repeat(duplicate, 3)
-	terms := quoteTestTerms(t)
-	terms.FileSizeBytes = 2*masterseed.BlockSize + 1
-	terms.SeedHash = masterseed.Sum256(seed).Bytes()
 
+	// Same hash at every position including the last: charged once at the
+	// quoted tail price; lengths are never compared.
 	ambiguous := quoteTestTerms(t)
 	ambiguous.FileSizeBytes = 2*masterseed.BlockSize + 1
 	ambiguousSeed := bytes.Repeat(duplicate, 3)
 	ambiguous.SeedHash = masterseed.Sum256(ambiguousSeed).Bytes()
 	ambiguous.FullBlockPriceSatoshis = 500
-	if _, err := ContentHashesPriceSatoshis(context.Background(), ambiguous, [][]byte{append([]byte(nil), duplicate...)}, ambiguousSeed); err == nil {
-		t.Fatal("conflicting expected lengths accepted")
+	ambiguous.TailPriceSatoshis = 50
+	price, err := ContentHashesPriceSatoshis(context.Background(), ambiguous, [][]byte{append([]byte(nil), duplicate...)}, ambiguousSeed)
+	if err != nil || price != 50 {
+		t.Fatalf("duplicate tail priced = %d, %v; want single charge of 50", price, err)
 	}
 	consistent := quoteTestTerms(t)
 	consistent.FileSizeBytes = 2 * masterseed.BlockSize
 	consistentSeed := bytes.Repeat(duplicate, 2)
 	consistent.SeedHash = masterseed.Sum256(consistentSeed).Bytes()
 	consistent.FullBlockPriceSatoshis = 400
-	price, err := ContentHashesPriceSatoshis(context.Background(), consistent, [][]byte{append([]byte(nil), duplicate...)}, consistentSeed)
-	if err != nil || price != 400 {
-		t.Fatalf("duplicate positions priced = %d, %v; want single charge of 400", price, err)
+	consistent.TailPriceSatoshis = 40
+	price, err = ContentHashesPriceSatoshis(context.Background(), consistent, [][]byte{append([]byte(nil), duplicate...)}, consistentSeed)
+	if err != nil || price != 40 {
+		t.Fatalf("duplicate positions priced = %d, %v; want single charge of 40", price, err)
 	}
-	_ = seed
+	// Same hash away from the last position: charged once at the full price.
+	head, tail := []byte("head"), []byte("tail-block")
+	headHash, tailHash := masterseed.Sum256(head).Bytes(), masterseed.Sum256(tail).Bytes()
+	mixedSeed := append(append(append([]byte(nil), headHash...), headHash...), tailHash...)
+	mixed := quoteTestTerms(t)
+	mixed.FileSizeBytes = 2*masterseed.BlockSize + 7
+	mixed.SeedHash = masterseed.Sum256(mixedSeed).Bytes()
+	mixed.FullBlockPriceSatoshis = 400
+	mixed.TailPriceSatoshis = 40
+	price, err = ContentHashesPriceSatoshis(context.Background(), mixed, [][]byte{append([]byte(nil), headHash...)}, mixedSeed)
+	if err != nil || price != 400 {
+		t.Fatalf("non-tail duplicate priced = %d, %v; want single charge of 400", price, err)
+	}
+}
+
+// TestShortBlocksPricedBySeedNotDeclaredSize mirrors the wallet repro: two
+// 100-byte blocks whose hashes are listed by the seed. The quoted size is
+// display-only, so a zero or wrong size must still verify and price by seed.
+func TestShortBlocksPricedBySeedNotDeclaredSize(t *testing.T) {
+	first := bytes.Repeat([]byte{7}, 100)
+	second := bytes.Repeat([]byte{9}, 100)
+	firstHash := masterseed.Sum256(first)
+	secondHash := masterseed.Sum256(second)
+	seed := append(append([]byte(nil), firstHash.Bytes()...), secondHash.Bytes()...)
+	seedHash := masterseed.Sum256(seed)
+	hashes := [][]byte{firstHash.Bytes(), secondHash.Bytes()}
+	payloads := [][]byte{append([]byte(nil), first...), append([]byte(nil), second...)}
+
+	for _, declaredSize := range []uint64{0, 200, 999999} {
+		terms := quoteTestTerms(t)
+		terms.FileSizeBytes = declaredSize
+		terms.SeedHash = seedHash.Bytes()
+		terms.SeedPriceSatoshis = 100
+		terms.FullBlockPriceSatoshis = 1000
+		terms.TailPriceSatoshis = 15
+		if err := ValidateFileQuoteTerms(terms); err != nil {
+			t.Fatalf("declared size %d rejected: %v", declaredSize, err)
+		}
+		price, err := ContentHashesPriceSatoshis(context.Background(), terms, hashes, seed)
+		if err != nil || price != 1015 {
+			t.Fatalf("declared size %d priced = %d, %v; want 1015", declaredSize, price, err)
+		}
+		if _, err := VerifyContentPayloads(context.Background(), terms, hashes, payloads, seed); err != nil {
+			t.Fatalf("declared size %d payloads rejected: %v", declaredSize, err)
+		}
+	}
 }
 
 func TestMasterSeedErrorsMapToBitFSCategories(t *testing.T) {
@@ -588,8 +646,15 @@ func TestMasterSeedErrorsMapToBitFSCategories(t *testing.T) {
 	sizeMismatch := quoteTestTerms(t)
 	sizeMismatch.FileSizeBytes = masterseed.BlockSize + 1
 	sizeMismatch.SeedHash = seedHash.Bytes()
-	_, err = findBlockMatches(context.Background(), sizeMismatch, masterseed.Sum256(source).Bytes(), seed)
-	assertMasterSeedCode(t, err, masterseed.SeedSizeMismatch)
+	// Declared lengths are never consulted for membership: the hash is listed
+	// by the verified seed, so the size mismatch is ignored.
+	matches, err := findBlockMatches(context.Background(), sizeMismatch, masterseed.Sum256(source).Bytes(), seed)
+	if err != nil {
+		t.Fatalf("seed membership rejected over declared size: %v", err)
+	}
+	if matches.MatchCount != 1 || !matches.IsTail {
+		t.Fatalf("seed matches = %+v, want single tail match", matches)
+	}
 
 	blockTerms := quoteTestTerms(t)
 	blockTerms.FileSizeBytes = uint64(len(source))

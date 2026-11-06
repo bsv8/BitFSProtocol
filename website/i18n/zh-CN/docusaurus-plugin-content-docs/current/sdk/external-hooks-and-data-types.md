@@ -85,7 +85,7 @@ ordered content hashes via `buyer.RequestContentInput.ContentHashes` and
 verified seeds via `Seed`. The pure steps derive every content kind from
 evidence (a hash equal to the quote SeedHash is the seed, everything else must
 be committed by that seed), verify hashes, seed structure, block membership,
-expected lengths, quote terms, and request/delivery signatures against those
+Seed-only membership, quoted tail price, quote terms, and request/delivery signatures against those
 explicit bytes, and accept or reject the whole batch atomically. Verification
 returns the verified payload batch as data (the first result of
 `buyer.VerifyDelivery`, in authorized order); saving it to final storage is the

@@ -13,9 +13,9 @@ export interface FileQuoteTerms {
   buyerPublicKey: Uint8Array
   /** 完整 seed 的价格，单位 satoshi。 */
   seedPriceSatoshis: bigint
-  /** 完整 256 KiB block 的价格，单位 satoshi。 */
+  /** 完整 256 KiB block 的价格，单位 satoshi；除末项外的正文块按此计价。 */
   fullBlockPriceSatoshis: bigint
-  /** 原始文件总字节数。 */
+  /** 原始文件总字节数；仅作展示声明，不参与归属、定价与完成判定。 */
   fileSizeBytes: bigint
   /** 报价失效时间，UTC Unix 秒。 */
   quoteExpiresAtUnixSeconds: bigint
@@ -27,6 +27,8 @@ export interface FileQuoteTerms {
   maxBlocksPerBatch: number
   /** 卖方声明的规范小写 MIME，进入报价签名与 ID。 */
   mediaType: string
+  /** 清单末项 Hash 的价格，单位 satoshi；由卖方签名，买方直接采用。 */
+  tailPriceSatoshis: bigint
 }
 
 /** Kind 5 买方累计付款授权。 */
@@ -82,7 +84,8 @@ export function encodeFileQuoteTerms (terms: Readonly<FileQuoteTerms>): Uint8Arr
   return encodeCanonical([
     copy(terms.seedHash), copy(terms.buyerPublicKey), terms.seedPriceSatoshis,
     terms.fullBlockPriceSatoshis, terms.fileSizeBytes, terms.quoteExpiresAtUnixSeconds,
-    encodeSupportedArbiterPublicKeys(terms.supportedArbiterPublicKeys), terms.recommendedFilename, BigInt(terms.maxBlocksPerBatch), terms.mediaType
+    encodeSupportedArbiterPublicKeys(terms.supportedArbiterPublicKeys), terms.recommendedFilename, BigInt(terms.maxBlocksPerBatch), terms.mediaType,
+    terms.tailPriceSatoshis
   ])
 }
 

@@ -177,8 +177,8 @@ func NewSignedContentRequest(ctx context.Context, authorization *PaymentAuthoriz
 func CheckContentRequestTiming(requestTerms *PaymentAuthorization, quoteTerms *FileQuoteTerms, at time.Time) error
 
 // VerifyContentPayloadsContext validates a delivered batch against the
-// authorized hashes: count, order, per-item SHA-256, seed/block membership, and
-// protocol expected lengths. The whole batch succeeds or fails atomically; it
+// authorized hashes: count, order, per-item SHA-256, seed hash and Seed-only
+// block membership. The whole batch succeeds or fails atomically; it
 // returns the seed actually used so callers can recompute pricing.
 func VerifyContentPayloadsContext(ctx context.Context, quoteTerms *FileQuoteTerms, contentHashes, payloads [][]byte, seed []byte) ([]byte, error)
 ```

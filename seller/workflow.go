@@ -98,11 +98,16 @@ func (workflow *workflow) CreateQuote(ctx context.Context, facts protocol.Facts,
 	if err != nil {
 		return nil, err
 	}
+	tailPrice, err := content.SellerTailPriceSatoshis(uint64(draft.FullBlockPriceSatoshis), draft.FileSizeBytes)
+	if err != nil {
+		return nil, err
+	}
 	terms := &content.FileQuoteTerms{
 		SeedHash:                       append([]byte(nil), draft.SeedHash...),
 		BuyerPublicKey:                 append([]byte(nil), draft.BuyerPublicKey[:]...),
 		SeedPriceSatoshis:              uint64(draft.SeedPriceSatoshis),
 		FullBlockPriceSatoshis:         uint64(draft.FullBlockPriceSatoshis),
+		TailPriceSatoshis:              tailPrice,
 		FileSizeBytes:                  draft.FileSizeBytes,
 		QuoteExpiresAtUnixSeconds:      int64(draft.QuoteExpiresAtUnixSeconds),
 		SupportedArbiterPublicKeysCBOR: supportedCBOR,

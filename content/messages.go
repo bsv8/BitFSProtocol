@@ -15,10 +15,11 @@ type FileQuoteTerms struct {
 	// SeedPriceSatoshis 是整个 MasterSeed 的绝对单价，单位 satoshi。
 	SeedPriceSatoshis uint64
 	// FullBlockPriceSatoshis 是一个完整块（256 KiB）的绝对单价，单位
-	// satoshi；尾块按实际长度比例计算并享受 10% 卖方让利。
+	// satoshi；除末项外的正文块按此计价。
 	FullBlockPriceSatoshis uint64
-	// FileSizeBytes 是文件总字节数；块数由它派生：0 -> 0 块，正数 ->
-	// ceil(file_size_bytes / 262144)。
+	// FileSizeBytes 是卖方声明的展示信息（文件总字节数）；未知统一填 0，
+	// 仅 uint64 范围检查，不决定归属、定价与完成，展示时不得认定为已验证的空文件。
+	// 真正的空文件由已验证 Seed 的空清单确定。
 	FileSizeBytes uint64
 	// QuoteExpiresAtUnixSeconds 是报价失效时间（UTC Unix 秒，int64）；
 	// 到期判断由调用方用自己读取的一次系统时间完成。
@@ -34,6 +35,10 @@ type FileQuoteTerms struct {
 	MaxBlocksPerBatch uint64
 	// MediaType 是卖方声明的规范小写 MIME（type/subtype），与文件名一起签名。
 	MediaType string
+	// TailPriceSatoshis 是清单末项 Hash 的绝对单价，单位 satoshi，由卖方
+	// 按其本地文件用 BlockPriceSatoshis 公式自行计算并签名；买方直接采用，
+	// 不再按长度推导。空文件时该值不被使用。
+	TailPriceSatoshis uint64
 }
 
 // SignedFileQuote is the complete Kind 1 FileQuote wire message payload:
